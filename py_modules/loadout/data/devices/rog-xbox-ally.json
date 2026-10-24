@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "rog-xbox-ally",
+  "name": "ROG Xbox Ally",
+  "match": { "product_name": ["ROG Xbox Ally RC73Y"] },
+  "native": "1920x1080",
+  "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 40 } },
+    "performance": { "any": { "fps_limit": 60 } },
+    "uncapped": { "any": {} }
+  }
+}

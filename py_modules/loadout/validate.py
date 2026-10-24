@@ -8,8 +8,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-PROFILES = ("performance", "balanced", "quality", "battery")
-RESOLUTIONS = ("720p", "800p", "1080p", "1200p", "1440p", "2160p")
+PROFILES = ("quality", "balanced", "performance", "uncapped")
+RESOLUTIONS = ("720p", "800p", "1080p", "1200p", "1440p", "1600p", "2160p")
 
 ENV_ALLOW = re.compile(r"^(DXVK_|VKD3D_|PROTON_|MANGOHUD|WINEDLLOVERRIDES$|SDL_|MESA_|RADV_)")
 ENV_DENY = {"LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "SHELL"}

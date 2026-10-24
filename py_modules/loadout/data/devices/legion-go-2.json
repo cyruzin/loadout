@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "legion-go-2",
+  "name": "Lenovo Legion Go 2",
+  "match": { "product_name": ["83N0", "83N1"] },
+  "native": "1920x1200",
+  "levels": {
+    "quality": { "any": { "fps_limit": 36 } },
+    "balanced": { "any": { "fps_limit": 48 } },
+    "performance": { "any": { "fps_limit": 72 } },
+    "uncapped": { "any": {} }
+  }
+}

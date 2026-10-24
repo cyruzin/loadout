@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "rog-ally",
+  "name": "ROG Ally",
+  "match": { "product_name": ["ROG Ally RC71L"] },
+  "native": "1920x1080",
+  "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 40 } },
+    "performance": { "any": { "fps_limit": 60 } },
+    "uncapped": { "any": {} }
+  }
+}

@@ -1,13 +1,13 @@
 import { callable } from "@decky/api";
 
-export type Profile = "default" | "performance" | "balanced" | "quality" | "battery";
+export type Profile = "default" | "quality" | "balanced" | "performance" | "uncapped";
 
 export const PROFILES: { id: Profile; label: string }[] = [
   { id: "default", label: "Default (original)" },
-  { id: "performance", label: "Performance" },
-  { id: "balanced", label: "Balanced" },
   { id: "quality", label: "Quality" },
-  { id: "battery", label: "Battery" },
+  { id: "balanced", label: "Balanced" },
+  { id: "performance", label: "Performance" },
+  { id: "uncapped", label: "Uncapped" },
 ];
 
 export interface GameSettings { profile: Profile; resolution: string | null }

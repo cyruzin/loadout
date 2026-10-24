@@ -70,7 +70,7 @@ def _apply(current, entry, profile, fps=40):
 
 def test_switching_profiles_never_stacks_and_default_restores():
     p1, e1 = _apply("-novid", None, "performance", 60)
-    p2, e2 = _apply(p1.launch_options, e1, "battery", 30)
+    p2, e2 = _apply(p1.launch_options, e1, "quality", 30)
     assert p2.launch_options.count("LOADOUT_BEGIN") == 1 and "=30" in p2.launch_options
     assert "=60" not in p2.launch_options
     back, _ = _apply(p2.launch_options, e2, "default")
@@ -89,7 +89,7 @@ def test_unknown_profile_rejected():
 
 
 def test_plan_blocked_on_corrupted_markers():
-    plan = planner.build_plan(480, "battery", "LOADOUT_END=1 %command%", None, {"fps_limit": 30}, False)
+    plan = planner.build_plan(480, "quality", "LOADOUT_END=1 %command%", None, {"fps_limit": 30}, False)
     assert plan.blocked and plan.launch_options == "LOADOUT_END=1 %command%"
 
 # --- validation ------------------------------------------------------------
@@ -97,13 +97,13 @@ def test_plan_blocked_on_corrupted_markers():
 
 def _device(**over):
     doc = {"schema_version": 1, "device": "x", "name": "X", "match": {"product_name": ["X1"]},
-           "native": "1280x800", "levels": {"battery": {"any": {"fps_limit": 30}}}}
+           "native": "1280x800", "levels": {"quality": {"any": {"fps_limit": 30}}}}
     doc.update(over)
     return doc
 
 
 def test_device_doc_valid():
-    assert validate_device_doc(_device())["levels"]["battery"]["any"] == {"fps_limit": 30}
+    assert validate_device_doc(_device())["levels"]["quality"]["any"] == {"fps_limit": 30}
 
 
 @pytest.mark.parametrize("over", [
@@ -112,11 +112,12 @@ def test_device_doc_valid():
     {"device": "../etc"},
     {"native": "big"},
     {"levels": {"turbo": {}}},
-    {"levels": {"battery": {"4k": {}}}},
-    {"levels": {"battery": {"any": {"fps_limit": 5}}}},
-    {"levels": {"battery": {"any": {"fps_limit": True}}}},
-    {"levels": {"battery": {"any": {"env": {"LD_PRELOAD": "/x.so"}}}}},
-    {"levels": {"battery": {"any": {"cmd": "rm -rf"}}}},
+    {"levels": {"battery": {}}},  # removed profile
+    {"levels": {"quality": {"4k": {}}}},
+    {"levels": {"quality": {"any": {"fps_limit": 5}}}},
+    {"levels": {"quality": {"any": {"fps_limit": True}}}},
+    {"levels": {"quality": {"any": {"env": {"LD_PRELOAD": "/x.so"}}}}},
+    {"levels": {"quality": {"any": {"cmd": "rm -rf"}}}},
     {"match": {"product_name": ["x"] * 17}},
     {"name": "n" * 61},
 ])
@@ -138,6 +139,20 @@ def test_bundled_devices_load_and_detect():
     devs = devices.load_devices()
     assert devices.detect(devs, "Jupiter") == "steam-deck-lcd"
     assert devices.detect(devs, "Galileo") == "steam-deck-oled"
+    # Ally product names carry per-unit suffixes, so matching is by substring.
+    for name, dev in (("ROG Ally RC71L_Action", "rog-ally"), ("ROG Ally RC71L_RC71L", "rog-ally"),
+                      ("ROG Ally X RC72LA_RC72LA_000123206", "rog-ally-x"),
+                      ("ROG Xbox Ally RC73YA_RC73YA", "rog-xbox-ally"),
+                      ("ROG Xbox Ally X RC73XA_RC73XA", "rog-xbox-ally-x"),
+                      ("ROG XBOX Ally X RC74XA RC74XA", "rog-xbox-ally-x20")):
+        assert devices.detect(devs, name) == dev, name
+    assert devices.native_class(devs["rog-ally"]) == "1080p"
+    # Lenovo reports the bare model code.
+    for name, dev in (("83E1", "legion-go"), ("83N0", "legion-go-2"), ("83N1", "legion-go-2"),
+                      ("83L3", "legion-go-s"), ("83N6", "legion-go-s"), ("83Q2", "legion-go-s"), ("83Q3", "legion-go-s")):
+        assert devices.detect(devs, name) == dev, name
+    assert devices.native_class(devs["legion-go"]) == "1600p"
+    assert devices.native_class(devs["legion-go-s"]) == "1200p"
     assert devices.detect(devs, "Unknown PC") is None
     assert devices.detect(devs, "") is None
     assert devices.native_class(devs["steam-deck-oled"]) == "800p"
@@ -151,15 +166,15 @@ def test_read_dmi(tmp_path):
 
 def test_level_fallback_chain():
     devs = {d["device"]: d for d in (
-        validate_device_doc(_device(levels={"battery": {"720p": {"fps_limit": 30}, "any": {"fps_limit": 25}}})),
+        validate_device_doc(_device(levels={"quality": {"720p": {"fps_limit": 30}, "any": {"fps_limit": 25}}})),
         validate_device_doc(_device(device="generic", match={"product_name": []},
-                                    levels={"battery": {"any": {"fps_limit": 20}}, "quality": {"any": {}}})),
+                                    levels={"quality": {"any": {"fps_limit": 20}}, "uncapped": {"any": {}}})),
     )}
-    assert devices.resolve_level(devs, "x", "battery", "720p") == ({"fps_limit": 30}, False)
-    assert devices.resolve_level(devs, "x", "battery", "1080p") == ({"fps_limit": 25}, False)
-    assert devices.resolve_level(devs, "x", "quality", "720p") == ({}, True)
-    assert devices.resolve_level(devs, "nope", "battery", "720p") == ({"fps_limit": 20}, True)
-    assert devices.resolve_level(devs, "generic", "battery", "720p") == ({"fps_limit": 20}, False)
+    assert devices.resolve_level(devs, "x", "quality", "720p") == ({"fps_limit": 30}, False)
+    assert devices.resolve_level(devs, "x", "quality", "1080p") == ({"fps_limit": 25}, False)
+    assert devices.resolve_level(devs, "x", "uncapped", "720p") == ({}, True)
+    assert devices.resolve_level(devs, "nope", "quality", "720p") == ({"fps_limit": 20}, True)
+    assert devices.resolve_level(devs, "generic", "quality", "720p") == ({"fps_limit": 20}, False)
     assert devices.resolve_level(devs, "x", "performance", "720p") == ({}, True)
 
 # --- steam library ---------------------------------------------------------

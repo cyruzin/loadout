@@ -5,9 +5,9 @@
   "match": { "product_name": ["Galileo"] },
   "native": "1280x800",
   "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 45 } },
     "performance": { "any": { "fps_limit": 90 } },
-    "balanced": { "any": { "fps_limit": 60 } },
-    "quality": { "any": { "fps_limit": 45 } },
-    "battery": { "any": { "fps_limit": 30 } }
+    "uncapped": { "any": {} }
   }
 }

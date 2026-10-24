@@ -30,8 +30,9 @@ def read_dmi(root: Path = Path("/sys/class/dmi/id")) -> str:
 
 
 def detect(devices: dict[str, dict[str, Any]], product_name: str) -> Optional[str]:
+    """Substring match: some vendors append per-unit suffixes (e.g. "ROG Ally RC71L_Action")."""
     for dev_id, doc in devices.items():
-        if product_name and product_name in doc["match"]:
+        if any(m in product_name for m in doc["match"]):
             return dev_id
     return None
 

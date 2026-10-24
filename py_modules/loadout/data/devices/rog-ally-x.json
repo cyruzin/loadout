@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "rog-ally-x",
+  "name": "ROG Ally X",
+  "match": { "product_name": ["ROG Ally X RC72LA"] },
+  "native": "1920x1080",
+  "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 40 } },
+    "performance": { "any": { "fps_limit": 60 } },
+    "uncapped": { "any": {} }
+  }
+}

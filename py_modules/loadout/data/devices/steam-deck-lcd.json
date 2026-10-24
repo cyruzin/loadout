@@ -5,9 +5,9 @@
   "match": { "product_name": ["Jupiter"] },
   "native": "1280x800",
   "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 40 } },
     "performance": { "any": { "fps_limit": 60 } },
-    "balanced": { "any": { "fps_limit": 45 } },
-    "quality": { "any": { "fps_limit": 40 } },
-    "battery": { "any": { "fps_limit": 30 } }
+    "uncapped": { "any": {} }
   }
 }

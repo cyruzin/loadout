@@ -47,7 +47,7 @@ def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str,
     if profile not in ALL_PROFILES:
         raise ValueError(f"unknown profile: {profile!r}")
     entry = entry or {}
-    # Always start from the original: switching Performance -> Battery never stacks (I5).
+    # Always start from the original: switching Performance -> Quality never stacks (I5).
     base, warning = launch.restore(current, entry.get("written"), entry.get("original"))
     warnings = [warning] if warning else []
     env = {} if profile == "default" else profile_env(level)

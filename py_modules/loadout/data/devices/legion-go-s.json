@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "legion-go-s",
+  "name": "Lenovo Legion Go S",
+  "match": { "product_name": ["83L3", "83N6", "83Q2", "83Q3"] },
+  "native": "1920x1200",
+  "levels": {
+    "quality": { "any": { "fps_limit": 30 } },
+    "balanced": { "any": { "fps_limit": 40 } },
+    "performance": { "any": { "fps_limit": 60 } },
+    "uncapped": { "any": {} }
+  }
+}

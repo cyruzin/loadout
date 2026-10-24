@@ -1,7 +1,7 @@
 # AGENTS.md - Loadout
 
 A Decky Loader plugin (SteamOS first; Bazzite/CachyOS best effort) that applies per-game profiles
-(Performance, Balanced, Quality, Battery) and returns a game to "Default (original)".
+(Quality, Balanced, Performance, Uncapped) and returns a game to "Default (original)".
 The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 
 ## Layout
@@ -37,7 +37,9 @@ LATER (do not build unless asked): community data download + SHA-256, per-game c
 
 ## Known unknowns (do NOT guess; flag them)
 - Steam frontend APIs (`SteamClient.Apps.*`) are not a public contract.
-- DMI `product_name` for devices other than Steam Deck (Jupiter/Galileo).
+- DMI `product_name` for ROG Ally and Legion Go families: taken from Handheld Daemon
+  (github.com/hhd-dev/hhd), not yet confirmed on our own hardware. Some original Legion Go units
+  report no valid product_name (HHD falls back to BIOS version); those must pick the device manually.
 - How to set (not just declare) the render resolution (`SetAppResolutionOverride` is a candidate).
 
 ## Code style

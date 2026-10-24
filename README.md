@@ -1,8 +1,8 @@
 # Loadout
 
 A [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin that applies one-click
-per-game profiles — **Performance**, **Balanced**, **Quality**, **Battery** — and can always return a
-game to **Default (original)**: exactly what you had before Loadout touched it.
+per-game, console-style profiles — **Quality**, **Balanced**, **Performance**, **Uncapped** — and can
+always return a game to **Default (original)**: exactly what you had before Loadout touched it.
 
 Targets SteamOS first; Bazzite, CachyOS and other Linux distros running Steam Game Mode + Decky
 should work too.
@@ -20,20 +20,32 @@ should work too.
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
 - Shows a dry-run diff and asks for confirmation before changing anything.
-- Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED bundled; anything
-  else falls back to a generic table) and asks you to confirm it on first run.
+- Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
+  Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm it on first run.
 - Lets you pick a preferred render resolution, globally and per game.
 - Changes apply the next time the game launches.
 
 **FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under
 Proton. Native Linux, OpenGL and native Vulkan games are not capped (yet).
 
-| Profile     | Steam Deck LCD | Steam Deck OLED | Generic  |
-|-------------|----------------|-----------------|----------|
-| Performance | 60 FPS         | 90 FPS          | uncapped |
-| Balanced    | 45 FPS         | 60 FPS          | 60 FPS   |
-| Quality     | 40 FPS         | 45 FPS          | 45 FPS   |
-| Battery     | 30 FPS         | 30 FPS          | 30 FPS   |
+| Device                          | Panel              | Quality | Balanced | Performance | Uncapped |
+|---------------------------------|--------------------|---------|----------|-------------|----------|
+| Steam Deck LCD                  | 1280×800, 60 Hz    | 30      | 40       | 60          | no cap   |
+| Steam Deck OLED                 | 1280×800, 90 Hz    | 30      | 45       | 90          | no cap   |
+| ROG Ally                        | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
+| ROG Ally X                      | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
+| ROG Xbox Ally                   | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
+| ROG Xbox Ally X                 | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
+| ROG Xbox Ally X20¹              | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
+| Lenovo Legion Go                | 2560×1600, 144 Hz  | 36      | 48       | 72          | no cap   |
+| Lenovo Legion Go 2              | 1920×1200, 144 Hz  | 36      | 48       | 72          | no cap   |
+| Lenovo Legion Go S              | 1920×1200, 120 Hz  | 30      | 40       | 60          | no cap   |
+| Generic / other                 | —                  | 30      | 40       | 60          | no cap   |
+
+Caps divide the panel refresh rate evenly (e.g. 40 FPS on 120 Hz, 48 FPS on 144 Hz) to keep frame
+pacing smooth.
+
+¹ X20 support is early.
 
 Values live in `py_modules/loadout/data/devices/*.json`.
 
@@ -92,8 +104,9 @@ AGENTS.md                  rules for contributors and coding agents
 
 ## Adding a device
 
-Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). Put the exact
-`product_name` your device reports (`cat /sys/class/dmi/id/product_name`) — confirm it on real
+Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). Put a distinctive part
+of the `product_name` your device reports (matching is by substring, since some vendors add per-unit
+suffixes) (`cat /sys/class/dmi/id/product_name`) — confirm it on real
 hardware, don't guess. Run the tests; invalid files fail validation.
 
 ## License
