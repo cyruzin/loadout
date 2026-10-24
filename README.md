@@ -14,7 +14,8 @@ should work too.
   are listed (saved in settings):
   - **Verified on this device** (default): games with a Loadout entry whose `verified` list
     includes your device.
-  - **All Loadout games**: also entries not verified on your device, marked "(untested)".
+  - **All Loadout games**: also entries not verified on your device, marked "(untested)", and any
+    game with a profile applied, even a generic one.
   - **All games**: also every other installed game, marked "(generic)" (FPS cap only).
 
   When a filter matches more than 50 games (a big library, or lots of verified games), only the 50

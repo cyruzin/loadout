@@ -23,7 +23,8 @@ const profileLabel = (id: string | null) => api.PROFILES.find((p) => p.id === id
 // Cumulative filters: each one also shows what the previous one does.
 const FILTERS: { id: api.GameFilter; label: string; keep: (g: api.Game) => boolean }[] = [
   { id: "verified", label: "Verified on this device", keep: (g) => g.verified },
-  { id: "loadout", label: "All Loadout games", keep: (g) => g.supported },
+  // Games with a Loadout entry, plus any game Loadout is managing (a profile applied, even generic).
+  { id: "loadout", label: "All Loadout games", keep: (g) => g.supported || !!g.profile },
   { id: "all", label: "All games", keep: () => true },
 ];
 
