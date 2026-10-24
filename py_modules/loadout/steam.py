@@ -13,7 +13,7 @@ TOOL_PREFIXES = ("Proton ", "Proton-", "Steam Linux Runtime", "Steamworks Common
 
 def parse_vdf(text: str) -> dict[str, Any]:
     """Text KeyValues -> nested dicts. Raises ValueError on malformed input."""
-    # ponytail: ignores // comments and #include, Steam doesn't write them in these files.
+    # Ignores // comments and #include, Steam doesn't write them in these files.
     stack: list[dict[str, Any]] = [{}]
     key: Optional[str] = None
     for m in _TOKEN.finditer(text):

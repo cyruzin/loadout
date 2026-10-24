@@ -40,5 +40,8 @@ LATER (do not build unless asked): community data download + SHA-256, per-game c
 - DMI `product_name` for devices other than Steam Deck (Jupiter/Galileo).
 - How to set (not just declare) the render resolution (`SetAppResolutionOverride` is a candidate).
 
+## Code style
+- Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.
+
 ## Definition of done
 Tests pass, typecheck clean, no `decky` import under `py_modules/loadout/`, docs updated.

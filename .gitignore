@@ -60,3 +60,4 @@ cli/decky
 specs/
 .venv/
 .pytest_cache/
+.codegraph/

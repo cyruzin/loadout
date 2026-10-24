@@ -34,7 +34,7 @@ def profile_env(level: dict[str, Any]) -> dict[str, str]:
     env = dict(level.get("env", {}))
     fps = level.get("fps_limit")
     if fps:
-        # ponytail: FPS cap via DXVK/VKD3D limiters (D3D games under Proton). A gamescope-level
+        # FPS cap via DXVK/VKD3D limiters (D3D games under Proton). A gamescope-level
         # cap needs Steam internals that aren't a public API yet.
         env.setdefault("DXVK_FRAME_RATE", str(fps))
         env.setdefault("VKD3D_FRAME_RATE", str(fps))

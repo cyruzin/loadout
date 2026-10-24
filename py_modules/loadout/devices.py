@@ -43,7 +43,7 @@ def native_class(doc: dict[str, Any]) -> str:
 def resolve_level(devices: dict[str, dict[str, Any]], device_id: Optional[str],
                   profile: str, resolution: str) -> tuple[dict[str, Any], bool]:
     """(level, approximate). Chain: device+resolution, device any, generic+resolution, generic any."""
-    # ponytail: no GPU-based device "class" step; add it when a second handheld family ships.
+    # No GPU-based device "class" step; add it when a second handheld family ships.
     dev = devices.get(device_id or "") or devices[GENERIC]
     gen = devices[GENERIC]
     for i, (doc, res) in enumerate(((dev, resolution), (dev, "any"), (gen, resolution), (gen, "any"))):
