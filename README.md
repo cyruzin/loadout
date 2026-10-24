@@ -25,7 +25,8 @@ should work too.
   Default puts every key back unless the game changed it since.
 - Shows a dry-run diff and asks for confirmation before changing anything.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
-  Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm it on first run.
+  Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
+  it on first run.
 - Lets you pick a preferred render resolution, globally and per game.
 - Changes apply the next time the game launches.
 
@@ -92,7 +93,7 @@ ssh -t deck@steamdeck 'sudo rm -rf ~/homebrew/plugins/Loadout && sudo mv /tmp/Lo
 Then open the Quick Access Menu (`…` button) → Decky → **Loadout**.
 
 Logs: `~/homebrew/logs/Loadout/`. Settings: `~/homebrew/settings/Loadout/settings.json`.
-Backups of your original launch options: `~/homebrew/data/Loadout/state.json`.
+Backups of your original launch options and game config values: `~/homebrew/data/Loadout/state.json`.
 
 The backend runs as your normal user (no root flag).
 
@@ -118,22 +119,30 @@ Installing a release on a device: Decky → Settings → enable **Developer mode
 
 ```
 main.py                    Decky adapter (only file importing `decky`)
-py_modules/loadout/        pure Python core + bundled device data
+py_modules/loadout/        pure Python core
+py_modules/loadout/data/   bundled device tables and per-game data
 src/                       React/TypeScript frontend (@decky/ui, @decky/api)
 tests/                     pytest suite
+scripts/package.sh         builds out/Loadout.zip
+.github/workflows/         tag-triggered release
 AGENTS.md                  rules for contributors and coding agents
 ```
 
 ## Adding a game
 
-Create `py_modules/loadout/data/games/<appid>.json` (see `1245620.json`, ELDEN RING). Each profile
-can add allowlisted env vars to the launch options (per-game values win over device values) and
-set keys in the game's XML config files. Paths must start with `{prefix}/` (the game's Proton
-prefix) or `{install_dir}/`; keys must already exist in the file (copy them from a real config,
-never guess). Optionally list the values each key accepts in `options` (keyed by the same path);
-profiles that set anything outside that list are rejected. Only
-define profiles that were actually tested: list each device in `verified` (Proton version, device
-id, date) and link where the settings came from in `source`.
+Create `py_modules/loadout/data/games/<appid>.json` (see `1245620.json`, ELDEN RING). Each profile can:
+
+- add allowlisted env vars to the launch options (per-game values win over device values);
+- set keys in the game's XML config files. Paths must start with `{prefix}/` (the game's Proton
+  prefix) or `{install_dir}/`, and keys must already exist in the file: copy them from a real
+  config, never guess.
+
+`options` lists the values each key accepts (copy them from the in-game menu; e.g. ELDEN RING
+writes Off as `DISABLE` and Maximum as `MAX`). Profiles that set anything outside that list are
+rejected.
+
+Only define profiles that were actually tested: list each device in `verified` (Proton version,
+device id, date) and link where the settings came from in `source`.
 
 ```json
 {
@@ -145,6 +154,12 @@ id, date) and link where the settings came from in `source`.
     { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
     { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
   ],
+  "options": {
+    "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml": {
+      "MotionBlur": ["DISABLE", "LOW", "MEDIUM", "HIGH"],
+      "ShadowQuality": ["LOW", "MEDIUM", "HIGH", "MAX"]
+    }
+  },
   "profiles": {
     "quality": {
       "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
@@ -160,10 +175,10 @@ id, date) and link where the settings came from in `source`.
 
 ## Adding a device
 
-Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). Put a distinctive part
-of the `product_name` your device reports (matching is by substring, since some vendors add per-unit
-suffixes) (`cat /sys/class/dmi/id/product_name`) — confirm it on real
-hardware, don't guess. Run the tests; invalid files fail validation.
+Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). In `match`, put a
+distinctive part of what `cat /sys/class/dmi/id/product_name` prints on the device (matching is by
+substring, since some vendors add per-unit suffixes). Confirm it on real hardware, don't guess.
+Run the tests; invalid files fail validation.
 
 ## License
 
