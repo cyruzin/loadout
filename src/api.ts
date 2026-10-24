@@ -17,6 +17,7 @@ export interface Settings {
   global_profile: null;
   games: Record<string, GameSettings>;
   game_filter: GameFilter;
+  last_game: number | null;
 }
 export interface Display { native: string; resolution: string; external: boolean }
 export interface Bootstrap {

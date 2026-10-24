@@ -1,6 +1,6 @@
 {
   "name": "loadout",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Per-game Quality / Balanced / Performance / Uncapped profiles for Decky Loader",
   "type": "module",
   "scripts": {

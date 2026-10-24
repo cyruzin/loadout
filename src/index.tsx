@@ -161,18 +161,22 @@ function Content() {
     // A backend that failed to start never answers, so don't wait forever.
     const timer = setTimeout(() => setLoadError("The Loadout backend did not respond."), 10000);
     api.getBootstrap().then(
-      (b) => { clearTimeout(timer); setBoot(b); setSettings(b.settings); },
+      async (b) => {
+        clearTimeout(timer);
+        setBoot(b);
+        setSettings(b.settings);
+        const g = await api.listGames();
+        setGames(g);
+        // Which game to show: this session's pick, else the last game configured (survives Steam and
+        // Decky restarts), else the running one; `selected` falls back to the first visible game.
+        const installed = (id: unknown) => g.some((x) => x.appid === id);
+        if (installed(kept.get("appid"))) return;
+        const running = window.SteamUIStore?.MainRunningAppID;
+        const next = [b.settings.last_game, running].find(installed);
+        if (next !== undefined && next !== null) setAppid(next);
+      },
       (e) => { clearTimeout(timer); setLoadError(String(e)); },
-    );
-    api.listGames().then((g) => {
-      setGames(g);
-      // Keep the user's pick across remounts; else prefer the running game (if the filter shows it,
-      // otherwise `selected` falls back to the first visible game).
-      const picked = kept.get("appid");
-      if (g.some((x) => x.appid === picked)) return;
-      const running = window.SteamUIStore?.MainRunningAppID;
-      if (g.some((x) => x.appid === running)) setAppid(running);
-    }, reportError);
+    ).catch(reportError);
   }, []);
 
   if (loadError && !boot) {

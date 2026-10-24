@@ -22,6 +22,9 @@ should work too.
   with a note saying so, and a **Search games** field (opens the on-screen keyboard) finds any
   other game in that filter by name.
 
+  When the panel opens it shows the last game you applied a profile or resolution to (remembered
+  across Steam and Decky restarts), else the game that's running.
+
   Games with a profile applied show it next to the name (e.g. "Crysis 3 (generic) · Performance").
   If the filter hides such a game, a note lists it so it can still be set back to Default.
 - Applies a profile by writing a managed block to the game's launch options, e.g.

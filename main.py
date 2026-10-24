@@ -15,6 +15,7 @@ from loadout.validate import RESOLUTIONS  # noqa: E402
 SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
     "schema_version": 1, "device": None, "global_profile": None, "games": {},
     "game_filter": "verified",
+    "last_game": None,  # last game a profile or resolution was applied to: selected when the QAM opens
 })
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
 DEVICES = devices.load_devices()
@@ -143,6 +144,9 @@ class Plugin:
         # The originals stay recorded, so Default still restores the resolution with everything else.
         state["games"][key] = {**entry, "files": new_files}
         STATE.save(state)
+        s = SETTINGS.load()
+        s["last_game"] = appid
+        SETTINGS.save(s)
         decky.logger.info(f"applied resolution {res} to {appid}")
         return {"applied": True, "warnings": list(plan.warnings), "resolution": res}
 
@@ -165,6 +169,7 @@ class Plugin:
         STATE.save(state)
         s = SETTINGS.load()
         s["games"].setdefault(key, {"profile": "default", "resolution": None})["profile"] = profile
+        s["last_game"] = appid
         SETTINGS.save(s)
         decky.logger.info(f"applied {profile} to {appid}")
         return {"launch_options": plan.launch_options, "warnings": list(plan.warnings), "applied": True}
