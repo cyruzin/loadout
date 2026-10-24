@@ -41,6 +41,14 @@ def native_class(doc: dict[str, Any]) -> str:
     return doc["native"].split("x")[1] + "p"
 
 
+def resolution_size(resolution: str, native: str) -> tuple[int, int]:
+    """"720p" on a device whose panel is `native` ("1920x1080") -> (1280, 720): the panel's aspect
+    ratio at that height, width rounded to an even number (16:10 Deck: 720p -> 1152x720)."""
+    nw, nh = (int(n) for n in native.split("x"))
+    height = int(resolution.rstrip("p"))
+    return 2 * round(height * nw / nh / 2), height
+
+
 def resolve_level(devices: dict[str, dict[str, Any]], device_id: Optional[str],
                   profile: str, resolution: str) -> tuple[dict[str, Any], bool]:
     """(level, approximate). Chain: device+resolution, device any, generic+resolution, generic any."""

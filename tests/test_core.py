@@ -216,6 +216,26 @@ def test_game_options_rejected(options):
         validate_game_doc(_game(options=options))
 
 
+def test_game_doc_resolution():
+    res = [{"path": "{install_dir}/G.ini", "format": "ini", "width": ["[S]X"], "height": ["[S]Y"]}]
+    assert validate_game_doc(_game(resolution=res))["resolution"] == res
+    assert games.resolution_files(validate_game_doc(_game(resolution=res)), 1280, 720) == [
+        {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]X": "1280", "[S]Y": "720"}}]
+    assert games.resolution_files(None, 1280, 720) == []
+
+
+@pytest.mark.parametrize("res", [
+    {}, [{"path": "/etc/x", "format": "ini", "width": ["[S]X"], "height": ["[S]Y"]}],
+    [{"path": "{prefix}/x", "format": "json", "width": ["[S]X"], "height": ["[S]Y"]}],
+    [{"path": "{prefix}/x", "format": "ini", "width": ["X"], "height": ["[S]Y"]}],
+    [{"path": "{prefix}/x", "format": "ini", "width": [], "height": ["[S]Y"]}],
+    [{"path": "{prefix}/x", "format": "ini", "width": ["[S]X"]}],
+])
+def test_game_doc_resolution_rejected(res):
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(resolution=res))
+
+
 def test_game_doc_ini_files():
     ok = {"quality": {"files": [_xml("{install_dir}/G.ini", fmt="ini", values={"[/Script/X.Y]sg.A": "1"})]}}
     assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["format"] == "ini"
@@ -230,14 +250,16 @@ def test_game_file_name_must_match_appid(tmp_path):
 def test_annotate_marks_supported_verified_and_profile():
     installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"},
                  {"appid": 2, "name": "Lies of P"}]
-    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}]}, 2: {"verified": []}}
+    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}], "resolution": [{"path": "x"}]},
+            2: {"verified": [], "resolution": []}}
     applied = {"1": {"profile": "performance"}}
-    rows = lambda device: [(g["supported"], g["verified"], g["profile"])
+    rows = lambda device: [(g["supported"], g["verified"], g["resolution"], g["profile"])
                            for g in games.annotate(installed, docs, applied, device)]
-    assert rows("rog-xbox-ally") == [(True, True, None), (False, False, "performance"), (True, False, None)]
+    assert rows("rog-xbox-ally") == [(True, True, True, None), (False, False, False, "performance"),
+                                     (True, False, False, None)]
     # Verified is per device: the same entry is untested on a Legion Go.
-    assert rows("legion-go")[0] == (True, False, None)
-    assert rows(None)[0] == (True, False, None)
+    assert rows("legion-go")[0] == (True, False, True, None)
+    assert rows(None)[0] == (True, False, True, None)
 
 
 def test_elden_ring_performance_and_uncapped_use_lowest_settings():
@@ -293,6 +315,15 @@ def test_bundled_devices_load_and_detect():
     assert devices.detect(devs, "Unknown PC") is None
     assert devices.detect(devs, "") is None
     assert devices.native_class(devs["steam-deck-oled"]) == "800p"
+
+
+@pytest.mark.parametrize("res, native, size", [
+    ("720p", "1920x1080", (1280, 720)), ("1080p", "1920x1080", (1920, 1080)),
+    ("720p", "1280x800", (1152, 720)), ("800p", "1280x800", (1280, 800)),
+    ("1080p", "1920x1200", (1728, 1080)), ("1600p", "2560x1600", (2560, 1600)),
+])
+def test_resolution_size_keeps_the_panel_aspect(res, native, size):
+    assert devices.resolution_size(res, native) == size
 
 
 def test_read_dmi(tmp_path):

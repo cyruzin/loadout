@@ -36,10 +36,13 @@ def _plan(appid, profile, current):
     res = s["games"].get(key, {}).get("resolution") or s["render_resolution"] or devices.native_class(dev)
     level, approx = devices.resolve_level(DEVICES, s["device"], profile, res)
     spec = GAMES.get(appid, {}).get("profiles", {}).get(profile, {})
+    specs = list(spec.get("files", []))
+    if profile != "default":  # Default restores the original resolution with everything else
+        specs += games.resolution_files(GAMES.get(appid), *devices.resolution_size(res, dev["native"]))
     entry = STATE.load()["games"].get(key)
     root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
     ctx = steam.app_paths(root, appid) if root else None
-    file_plan = files.plan_files(spec.get("files", []), ctx, (entry or {}).get("files", {}))
+    file_plan = files.plan_files(specs, ctx, (entry or {}).get("files", {}))
     return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan)
 
 

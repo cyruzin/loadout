@@ -27,7 +27,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - `src/api.ts` typed `callable()` wrappers + Steam launch-option access. `src/index.tsx` UI.
   The QAM panel remounts (e.g. when a dropdown menu opens), which wipes `useState`: keep UI state
   in `useKept` (module-level store in `index.tsx`), never plain `useState`. Dropdowns use
-  `layout="below"` so long values aren't cut off.
+  `layout="below"` so long values aren't cut off. Keep dropdowns short: every filter caps its list
+  to the 50 most recently played (`LIST_LIMIT`) and offers a search past that; a D-pad can't scroll
+  hundreds of items, and the verified list will grow too.
 
 ## Commands
     pnpm install && pnpm run build     # frontend -> dist/index.js
@@ -55,7 +57,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 ## Scope
 IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML/INI config keys,
 launch options, settings file,
-device detection, preferred render resolution.
+device detection, game resolution written to config files (games whose entry has `resolution`).
 LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
 Wine registry, global/batch profile, export/import.
 OUT (maintainer decision): TDP and other power settings; the user handles those in Steam's QAM.
@@ -65,7 +67,9 @@ OUT (maintainer decision): TDP and other power settings; the user handles those 
 - DMI `product_name` for ROG Ally and Legion Go families: taken from Handheld Daemon
   (github.com/hhd-dev/hhd), not yet confirmed on our own hardware. Some original Legion Go units
   report no valid product_name (HHD falls back to BIOS version); those must pick the device manually.
-- How to set (not just declare) the render resolution (`SetAppResolutionOverride` is a candidate).
+- Which resolution keys a game actually reads: Lies of P uses ResolutionSizeX/Y (+ LastUserConfirmed)
+  and ELDEN RING the Window/FullScreen/Borderless pairs; confirm on device after adding a game.
+  `SteamClient.Apps.SetAppResolutionOverride` (Steam-level) is untested and not used.
 
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.

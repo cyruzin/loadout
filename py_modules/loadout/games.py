@@ -20,18 +20,27 @@ def load_games(directory: Path = DATA_DIR) -> dict[int, dict[str, Any]]:
     return out
 
 
+def resolution_files(doc: Optional[dict[str, Any]], width: int, height: int) -> list[dict[str, Any]]:
+    """File edits that set the game's resolution, in the same shape as a profile's `files`."""
+    return [{"path": r["path"], "format": r["format"],
+             "set": {**dict.fromkeys(r["width"], str(width)), **dict.fromkeys(r["height"], str(height))}}
+            for r in (doc or {}).get("resolution", [])]
+
+
 GAME_FILTERS = ("verified", "loadout", "all")  # cumulative: each one shows more games
 
 
 def annotate(installed: list[dict[str, Any]], docs: dict[int, dict[str, Any]],
              applied: dict[str, dict[str, Any]], device: Optional[str]) -> list[dict[str, Any]]:
     """Per installed game: has a Loadout entry (`supported`), that entry was verified on this
-    device (`verified`), and which profile is applied right now (`profile`, None if none)."""
+    device (`verified`), Loadout can set its resolution (`resolution`), and which profile is
+    applied right now (`profile`, None if none)."""
     out = []
     for g in installed:
         doc = docs.get(g["appid"])
         verified = doc is not None and any(v["device"] == device for v in doc["verified"])
         entry = applied.get(str(g["appid"]))
         out.append({**g, "supported": doc is not None, "verified": verified,
+                    "resolution": bool(doc and doc.get("resolution")),
                     "profile": entry.get("profile") if entry else None})
     return out

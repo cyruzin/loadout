@@ -26,7 +26,9 @@ export interface Bootstrap {
   resolutions: string[];
 }
 export type GameFilter = "verified" | "loadout" | "all";
-export interface Game { appid: number; name: string; supported: boolean; verified: boolean; profile: Profile | null }
+export interface Game {
+  appid: number; name: string; supported: boolean; verified: boolean; resolution: boolean; profile: Profile | null;
+}
 export interface Change { kind: string; target: string; key: string; old: string | null; new: string | null }
 export interface Plan {
   appid: number;

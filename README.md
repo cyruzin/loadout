@@ -17,6 +17,11 @@ should work too.
   - **All Loadout games**: also entries not verified on your device, marked "(untested)".
   - **All games**: also every other installed game, marked "(generic)" (FPS cap only).
 
+  When a filter matches more than 50 games (a big library, or lots of verified games), only the 50
+  most recently played are listed (plus the running game and any game with a profile applied),
+  with a note saying so, and a **Search games** field (opens the on-screen keyboard) finds any
+  other game in that filter by name.
+
   Games with a profile applied show it next to the name (e.g. "Crysis 3 (generic) · Performance").
   If the filter hides such a game, a note lists it so it can still be set back to Default.
 - Applies a profile by writing a managed block to the game's launch options, e.g.
@@ -39,9 +44,14 @@ should work too.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
-- Lets you declare the resolution you render at, globally and per game. Loadout doesn't change
-  the game's resolution; it only uses this to pick device values. All bundled device tables use the
-  same caps at every resolution today, so for now it has no effect.
+- Sets the game's resolution for games whose entry says where it is stored (both bundled games).
+  The global **Game resolution** (asked during setup, changeable in Settings) applies to all of
+  them; **Resolution for this game** overrides it and only appears for those games. It's written
+  together with the profile (apply the profile again after changing it) and Default restores the
+  original. The width follows your panel's aspect ratio: 720p is 1280×720 on a 16:9 ROG Ally and
+  1152×720 on a 16:10 Steam Deck.
+- Shows the result of every apply in the panel itself (Steam can play a toast's sound without
+  showing it while the Quick Access Menu is open).
 - Launch-option changes (FPS cap, env vars) apply the next time the game launches.
 
 **FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under

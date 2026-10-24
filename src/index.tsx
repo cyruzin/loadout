@@ -6,13 +6,13 @@ import {
   PanelSectionRow,
   showModal,
   staticClasses,
+  TextField,
 } from "@decky/ui";
 import { definePlugin, toaster } from "@decky/api";
 import { useEffect, useState } from "react";
 import { FaSlidersH } from "react-icons/fa";
 import * as api from "./api";
 
-const errorToast = (e: unknown) => toaster.toast({ title: "Loadout", body: String(e) });
 
 const profileLabel = (id: string | null) => api.PROFILES.find((p) => p.id === id)?.label ?? id;
 
@@ -22,6 +22,18 @@ const FILTERS: { id: api.GameFilter; label: string; keep: (g: api.Game) => boole
   { id: "loadout", label: "All Loadout games", keep: (g) => g.supported },
   { id: "all", label: "All games", keep: () => true },
 ];
+
+// Hundreds of games (installed, or verified once the data grows) make a dropdown nobody can scroll
+// with a D-pad: any filter's list is capped to the most recently played ones, plus a search.
+const LIST_LIMIT = 50;
+
+function lastPlayed(appid: number): number {
+  try {
+    return window.appStore?.GetAppOverviewByAppID(appid)?.rt_last_time_played ?? 0;  // Steam internals
+  } catch {
+    return 0;
+  }
+}
 
 function gameLabel(g: api.Game) {
   const kind = !g.supported ? " (generic)" : g.verified ? "" : " (untested)";
@@ -41,12 +53,24 @@ function useKept<T>(key: string, initial: T): [T, (value: T) => void] {
     subscribers.add(notify);
     return () => { subscribers.delete(notify); };
   }, []);
-  const set = (value: T) => {
-    kept.set(key, value);
-    subscribers.forEach((notify) => notify());
-  };
-  return [(kept.has(key) ? kept.get(key) : initial) as T, set];
+  return [(kept.has(key) ? kept.get(key) : initial) as T, (value: T) => setKept(key, value)];
 }
+
+function setKept(key: string, value: unknown) {
+  kept.set(key, value);
+  subscribers.forEach((notify) => notify());
+}
+
+type Status = { ok: boolean; text: string };
+
+// Steam may play a toast's sound without showing it (e.g. while the Quick Access Menu is open),
+// so every outcome is also written in the panel itself.
+function report(ok: boolean, text: string) {
+  setKept("status", { ok, text } satisfies Status);
+  toaster.toast({ title: "Loadout", body: text, showToast: true });
+}
+
+const reportError = (e: unknown) => report(false, String(e));
 
 function describe(plan: api.Plan, running: boolean) {
   const env = plan.changes.filter((c) => c.kind === "env");
@@ -87,11 +111,12 @@ function Onboarding({ boot, onDone }: { boot: api.Bootstrap; onDone: (s: api.Set
           selectedOption={device} onChange={(o) => setDevice(o.data)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <DropdownItem layout="below" label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+        <DropdownItem layout="below" label="Game resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+          description="The resolution you want games to run at. Change it any time in Settings."
           selectedOption={res ?? native} onChange={(o) => setRes(o.data)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ButtonItem layout="below" onClick={() => api.saveSettings(device, res ?? native).then(onDone, errorToast)}>
+        <ButtonItem layout="below" onClick={() => api.saveSettings(device, res ?? native).then(onDone, reportError)}>
           Confirm
         </ButtonItem>
       </PanelSectionRow>
@@ -106,8 +131,22 @@ function Content() {
   const [appid, setAppid] = useKept<number | undefined>("appid", undefined);
   const [busy, setBusy] = useKept("busy", false);
   const [loadError, setLoadError] = useKept<string | undefined>("loadError", undefined);
+  const [status] = useKept<Status | undefined>("status", undefined);
   const filter = FILTERS.find((f) => f.id === settings?.game_filter) ?? FILTERS[0];
-  const visible = games.filter(filter.keep);
+  const [search, setSearch] = useKept("search", "");
+  const inFilter = games.filter(filter.keep);
+  // Search only when the list can be capped (a leftover query keeps it visible so it can be cleared).
+  const searchable = inFilter.length > LIST_LIMIT || search !== "";
+  const query = searchable ? search.trim().toLowerCase() : "";
+  const candidates = query ? inFilter.filter((g) => g.name.toLowerCase().includes(query)) : inFilter;
+  // Always listed when they match: a game with a profile applied, the running and the picked game.
+  const running = window.SteamUIStore?.MainRunningAppID;
+  const pinned = (g: api.Game) => !!g.profile || g.appid === appid || g.appid === running;
+  const rest = candidates.filter((g) => !pinned(g));
+  const cappedOut = Math.max(0, rest.length - LIST_LIMIT);
+  const visible = cappedOut  // short lists stay alphabetical; long ones keep the most recently played
+    ? [...candidates.filter(pinned), ...rest.sort((a, b) => lastPlayed(b.appid) - lastPlayed(a.appid)).slice(0, LIST_LIMIT)]
+    : candidates;
   // Games with a profile applied that the filter hides: listed below, so Default stays reachable.
   const hiddenApplied = games.filter((g) => g.profile && !filter.keep(g));
   // Selection falls back to the first visible game when the current one is hidden.
@@ -128,7 +167,7 @@ function Content() {
       if (g.some((x) => x.appid === picked)) return;
       const running = window.SteamUIStore?.MainRunningAppID;
       if (g.some((x) => x.appid === running)) setAppid(running);
-    }, errorToast);
+    }, reportError);
   }, []);
 
   if (loadError && !boot) {
@@ -142,6 +181,7 @@ function Content() {
   if (!settings.device) return <Onboarding boot={boot} onDone={setSettings} />;
 
   const game = selected !== undefined ? settings.games[String(selected)] : undefined;
+  const info = games.find((g) => g.appid === selected);
   const current: api.Profile = game?.profile ?? "default";
 
   const pick = async (profile: api.Profile) => {
@@ -162,21 +202,23 @@ function Content() {
               // Re-read: the user may have edited launch options while the dialog was open.
               const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected));
               if (!result.applied) {
-                errorToast(result.warnings.join(" "));
+                reportError(result.warnings.join(" "));
                 return;
               }
               api.setLaunchOptions(selected, result.launch_options);
               setSettings((await api.getBootstrap()).settings);
               setGames(await api.listGames());  // refresh the applied profile shown next to each game
-              toaster.toast({ title: "Loadout", body: "Applies the next time the game launches" });
+              report(true, profile === "default"
+                ? `${info?.name}: original settings restored.`
+                : `${profileLabel(profile)} applied to ${info?.name}. Takes effect the next time it launches.`);
             } catch (e) {
-              errorToast(e);
+              reportError(e);
             }
           }}
         />,
       );
     } catch (e) {
-      errorToast(e);
+      reportError(e);
     } finally {
       setBusy(false);
     }
@@ -189,14 +231,30 @@ function Content() {
           <DropdownItem layout="below" label="Show" rgOptions={FILTERS.map((f) => ({ data: f.id, label: f.label }))}
             selectedOption={filter.id}
             description="Untested: has Loadout settings, not verified on this device. Generic: FPS cap only."
-            onChange={(o) => api.setGameFilter(o.data).then(setSettings, errorToast)} />
+            onChange={(o) => api.setGameFilter(o.data).then(setSettings, reportError)} />
         </PanelSectionRow>
+        {searchable && (
+          <PanelSectionRow>
+            <TextField label="Search games" placeholder="Type part of a name" bShowClearAction
+              value={search} onChange={(e) => setSearch(e.target.value)} />
+          </PanelSectionRow>
+        )}
         <PanelSectionRow>
           <DropdownItem layout="below" label="Game" disabled={!visible.length}
-            strDefaultLabel="No games for this filter"
+            strDefaultLabel={query ? "No games match the search" : "No games for this filter"}
             rgOptions={visible.map((g) => ({ data: g.appid, label: gameLabel(g) }))}
-            selectedOption={selected} onChange={(o) => setAppid(o.data)} />
+            selectedOption={selected} onChange={(o) => { setAppid(o.data); setKept("status", undefined); }} />
         </PanelSectionRow>
+        {cappedOut > 0 && (
+          <PanelSectionRow>
+            <div style={{ fontSize: 12, color: "#e8a33d" }}>
+              {query
+                ? `Showing ${LIST_LIMIT} of ${LIST_LIMIT + cappedOut} matches. Type more of the name to narrow it down.`
+                : `Lots of games match this filter, so only the ${LIST_LIMIT} most recently played are listed ` +
+                  `(${cappedOut} more). Use the search to find any other game.`}
+            </div>
+          </PanelSectionRow>
+        )}
         {hiddenApplied.length > 0 && (
           <PanelSectionRow>
             <div style={{ fontSize: 12, color: "#e8a33d" }}>
@@ -211,24 +269,39 @@ function Content() {
             rgOptions={api.PROFILES.map((p) => ({ data: p.id, label: p.label }))}
             selectedOption={current} onChange={(o) => pick(o.data)} />
         </PanelSectionRow>
-        <PanelSectionRow>
-          <DropdownItem layout="below" label="Resolution for this game" disabled={selected === undefined}
-            rgOptions={[{ data: null, label: `Global (${settings.render_resolution})` },
-              ...boot.resolutions.map((r) => ({ data: r, label: r }))]}
-            selectedOption={game?.resolution ?? null}
-            onChange={(o) => selected !== undefined && api.setGameResolution(selected, o.data).then(setSettings, errorToast)} />
-        </PanelSectionRow>
+        {status && (
+          <PanelSectionRow>
+            <div style={{ fontSize: 12, color: status.ok ? "#59bf40" : "#e8a33d" }}>
+              {status.ok ? "✓ " : "⚠ "}{status.text}
+            </div>
+          </PanelSectionRow>
+        )}
+        {/* Only games whose entry says where the resolution lives: elsewhere it would do nothing. */}
+        {info?.resolution && (
+          <PanelSectionRow>
+            <DropdownItem layout="below" label="Resolution for this game"
+              description="Written to the game's settings when you apply a profile."
+              rgOptions={[{ data: null, label: `Global (${settings.render_resolution})` },
+                ...boot.resolutions.map((r) => ({ data: r, label: r }))]}
+              selectedOption={game?.resolution ?? null}
+              onChange={(o) => selected !== undefined && api.setGameResolution(selected, o.data).then((s) => {
+                setSettings(s);
+                if (current !== "default") report(true, `Apply ${profileLabel(current)} again to use the new resolution.`);
+              }, reportError)} />
+          </PanelSectionRow>
+        )}
       </PanelSection>
       <PanelSection title="Settings">
         <PanelSectionRow>
           <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
             selectedOption={settings.device}
-            onChange={(o) => api.saveSettings(o.data, settings.render_resolution ?? "1080p").then(setSettings, errorToast)} />
+            onChange={(o) => api.saveSettings(o.data, settings.render_resolution ?? "1080p").then(setSettings, reportError)} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem layout="below" label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+          <DropdownItem layout="below" label="Game resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+            description="Written to the settings of supported games when you apply a profile."
             selectedOption={settings.render_resolution}
-            onChange={(o) => api.saveSettings(settings.device!, o.data).then(setSettings, errorToast)} />
+            onChange={(o) => api.saveSettings(settings.device!, o.data).then(setSettings, reportError)} />
         </PanelSectionRow>
       </PanelSection>
     </>

@@ -276,6 +276,10 @@ ELDEN_RING = ("""<?xml version="1.0" encoding="UTF-16"?>
 <ScreenMode>BORDERLESS</ScreenMode>
 <Resolution-WindowScreenWidth>1280</Resolution-WindowScreenWidth>
 <Resolution-WindowScreenHeight>720</Resolution-WindowScreenHeight>
+<Resolution-FullScreenWidth>1280</Resolution-FullScreenWidth>
+<Resolution-FullScreenHeight>720</Resolution-FullScreenHeight>
+<Resolution-BorderlessScreenWidth>1280</Resolution-BorderlessScreenWidth>
+<Resolution-BorderlessScreenHeight>720</Resolution-BorderlessScreenHeight>
 <Auto-detectBestRenderingSettings>OFF</Auto-detectBestRenderingSettings>
 <QualitySetting>CUSTOM</QualitySetting>
 <TextureQuality>HIGH</TextureQuality>
@@ -391,6 +395,10 @@ FSR3FrameInterpolation=False
 bUseVSync=False
 ResolutionSizeX=1920
 ResolutionSizeY=1080
+LastUserConfirmedResolutionSizeX=1920
+LastUserConfirmedResolutionSizeY=1080
+DesiredScreenWidth=1280
+DesiredScreenHeight=720
 FrameRateLimit=30.000000
 LastCPUBenchmarkSteps=158.467346
 LastCPUBenchmarkSteps=135.435577
@@ -423,3 +431,39 @@ def test_lies_of_p_real_file_profiles_round_trip(tmp_path):
     assert "sg.ViewDistanceQuality=1\r\n" in text and "sg.ShadowQuality=0\r\n" in text
     apply([], ctx, balanced.state)  # Default (original)
     assert cfg.read_bytes() == LIES_OF_P
+
+
+# --- resolution ------------------------------------------------------------
+
+
+def test_resolution_written_with_the_profile_and_restored_by_default(tmp_path):
+    from loadout import devices, games
+    doc = games.load_games()[1627720]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "game/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(LIES_OF_P)
+
+    specs = doc["profiles"]["performance"]["files"] + games.resolution_files(
+        doc, *devices.resolution_size("720p", "1920x1080"))
+    plan = apply(specs, ctx, {})
+    text = cfg.read_bytes().decode("ascii")
+    for line in ("ResolutionSizeX=1280", "ResolutionSizeY=720", "LastUserConfirmedResolutionSizeX=1280",
+                 "LastUserConfirmedResolutionSizeY=720", "sg.ShadowQuality=0", "DesiredScreenWidth=1280"):
+        assert line + "\r\n" in text, line
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == LIES_OF_P
+
+
+def test_elden_ring_resolution_keys_exist_in_the_real_file(tmp_path):
+    from loadout import devices, games
+    doc = games.load_games()[1245620]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(ELDEN_RING)
+    plan = apply(games.resolution_files(doc, *devices.resolution_size("800p", "1280x800")), ctx, {})
+    text = cfg.read_bytes().decode("utf-16-le")
+    assert text.count(">1280<") == 3 and text.count(">800<") == 3 and ">720<" not in text
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == ELDEN_RING

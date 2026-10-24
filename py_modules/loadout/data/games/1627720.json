@@ -30,6 +30,14 @@
       "[ScalabilityGroups]sg.AnisotropyQuality": ["0", "1", "2", "3"]
     }
   },
+  "resolution": [
+    {
+      "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
+      "format": "ini",
+      "width": ["[/Script/ProjectP.LGameUserSettings]ResolutionSizeX", "[/Script/ProjectP.LGameUserSettings]LastUserConfirmedResolutionSizeX"],
+      "height": ["[/Script/ProjectP.LGameUserSettings]ResolutionSizeY", "[/Script/ProjectP.LGameUserSettings]LastUserConfirmedResolutionSizeY"]
+    }
+  ],
   "profiles": {
     "quality": {
       "files": [

@@ -151,9 +151,32 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
     return out
 
 
+def validate_resolution(x: Any) -> list[dict[str, Any]]:
+    """Where the game stores its resolution: [{path, format, width: [keys], height: [keys]}]."""
+    if not isinstance(x, list) or len(x) > 4:
+        raise ValidationError("resolution: expected list of at most 4")
+    out = []
+    for i, r in enumerate(x):
+        w = f"resolution[{i}]"
+        _obj(r, w, {"path", "format", "width", "height"}, {"path", "format", "width", "height"})
+        key_re = KEY_FORMATS.get(r["format"])
+        if key_re is None:
+            raise ValidationError(f"{w}.format: expected one of {sorted(KEY_FORMATS)}")
+        for axis in ("width", "height"):
+            keys = r[axis]
+            if (not isinstance(keys, list) or not 0 < len(keys) <= 4
+                    or not all(isinstance(k, str) and key_re.match(k) for k in keys)):
+                raise ValidationError(f"{w}.{axis}: expected 1..4 {r['format']} keys")
+        out.append({"path": _path_template(r["path"], f"{w}.path"), "format": r["format"],
+                    "width": list(r["width"]), "height": list(r["height"])})
+    return out
+
+
 def validate_game_doc(doc: Any) -> dict[str, Any]:
-    """Device-independent per-game data. Returns {appid, name, source, verified: [...], profiles: {p: {env, files}}}."""
-    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "options", "profiles"},
+    """Device-independent per-game data.
+    Returns {appid, name, source, verified: [...], resolution: [...], profiles: {p: {env, files}}}."""
+    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "options", "resolution",
+                       "profiles"},
          {"schema_version", "appid", "name", "profiles"})
     if doc["schema_version"] != 1:
         raise ValidationError("unsupported schema_version")
@@ -191,4 +214,5 @@ def validate_game_doc(doc: Any) -> dict[str, Any]:
                 allowed = options.get(f["path"], {}).get(k)
                 if allowed is not None and val not in allowed:
                     raise ValidationError(f"profiles.{profile}: {k}={val} not in {allowed}")
-    return {"appid": appid, "name": name, "source": source, "verified": verified, "profiles": clean}
+    return {"appid": appid, "name": name, "source": source, "verified": verified,
+            "resolution": validate_resolution(doc.get("resolution", [])), "profiles": clean}
