@@ -144,7 +144,7 @@ model):
   install folder). Nothing else is allowed, and Loadout refuses paths that escape those folders.
 - **`format`** is `xml` or `ini`; see `1627720.json` (Lies of P) for an INI entry.
 - **`resolution`** (optional, top level): where the game stores its resolution, so Loadout can
-  write the user's chosen resolution with every profile. List every key that holds the width and
+  write a resolution the user picks for the game (it never writes one otherwise). List every key that holds the width and
   the height (the game may keep several copies), then check on the device that the game really
   starts at the chosen resolution:
 

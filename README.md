@@ -92,7 +92,7 @@ What a profile does depends on whether the game has a Loadout entry in
 | FPS cap from the device table | yes | yes |
 | Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
 | In-game graphics settings (config file edits) | yes, where the entry defines them | no |
-| Game resolution written to the game's config | yes, where the entry maps it | no |
+| Game resolution written to the game's config | when you pick one, where the entry maps it | no |
 
 In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
 you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
