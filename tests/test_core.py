@@ -283,6 +283,12 @@ def test_lies_of_p_profiles_match_the_tested_presets():
     assert sg("balanced", "Shadow") == "0" and sg("quality", "Shadow") == "1"
 
 
+def test_resolution_keys():
+    doc = {"resolution": [{"width": ["[S]X", "[S]X2"], "height": ["[S]Y"]}]}
+    assert games.resolution_keys(doc) == {"[S]X", "[S]X2", "[S]Y"}
+    assert games.resolution_keys(None) == set() and games.resolution_keys({}) == set()
+
+
 def test_resolution_stale():
     res_1080 = [{"path": "p", "format": "ini", "set": {"[S]X": "1920", "[S]Y": "1080"}}]
     written = lambda x, y: {"/g.ini": {"[S]X": {"old": "1280", "new": x}, "[S]Y": {"old": "720", "new": y},

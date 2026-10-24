@@ -27,6 +27,10 @@ def resolution_files(doc: Optional[dict[str, Any]], width: int, height: int) -> 
             for r in (doc or {}).get("resolution", [])]
 
 
+def resolution_keys(doc: Optional[dict[str, Any]]) -> set[str]:
+    return {k for r in (doc or {}).get("resolution", []) for k in r["width"] + r["height"]}
+
+
 def resolution_stale(written: dict[str, dict[str, dict[str, str]]], res_files: list[dict[str, Any]]) -> bool:
     """Loadout wrote a resolution for this game that differs from what it would write now (e.g.
     "Native" written while docked, now handheld). In-game changes don't count: only what Loadout

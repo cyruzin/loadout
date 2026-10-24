@@ -31,6 +31,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   `layout="below"` so long values aren't cut off. Keep dropdowns short: every filter caps its list
   to the 50 most recently played (`LIST_LIMIT`) and offers a search past that; a D-pad can't scroll
   hundreds of items, and the verified list will grow too.
+  Text the user must read goes on a focusable item (e.g. a dropdown's `description`): the QAM
+  only scrolls to focusable items, so a text row below the last one gets cut off.
   Report every outcome with `report()` / `reportError()`: they write the in-panel status line and
   toast. Never rely on a toast alone (Steam can play its sound without showing it with the QAM open).
 
@@ -60,8 +62,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 ## Scope
 IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML/INI config keys,
 launch options, settings file,
-device detection, game resolution written to config files (games whose entry has `resolution`),
-capped to the native resolution of the screen in use (`read_display`: external display when docked).
+device detection, game resolution written to config files only when the user picks one for the game
+(games whose entry has `resolution`), capped to the screen's max mode (`read_display`: external
+display when docked). No pick = never touch it: Steam's game-resolution setting and the game decide.
 Screen changes are never acted on silently: `games.resolution_stale` flags games whose resolution
 Loadout wrote for another screen, and the UI offers "Update resolution".
 LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
@@ -76,8 +79,8 @@ OUT (maintainer decision): TDP and other power settings; the user handles those 
 - Which resolution keys a game actually reads: Lies of P uses ResolutionSizeX/Y (+ LastUserConfirmed)
   and ELDEN RING the Window/FullScreen/Borderless pairs; confirm on device after adding a game.
   `SteamClient.Apps.SetAppResolutionOverride` (Steam-level) is untested and not used.
-- `/sys/class/drm` display detection (connector `status` + first line of `modes`) is unit-tested
-  with fixtures but not yet confirmed on a docked device.
+- `/sys/class/drm` gives the display's supported modes (first = max), not the output resolution
+  chosen in Steam; that lives in `SteamClient.System.DisplayManager.GetState` (undocumented).
 
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.

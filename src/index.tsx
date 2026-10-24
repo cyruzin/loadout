@@ -267,7 +267,9 @@ function Content() {
       const result = await api.applyResolution(target);
       if (!result.applied) return reportError(result.warnings.join(" "));
       setBoot(await api.getBootstrap());  // this game's resolution is no longer stale
-      report(true, `${info?.name} set to ${result.resolution}. Takes effect the next time it launches.`);
+      report(true, result.resolution
+        ? `${info?.name} set to ${result.resolution}. Takes effect the next time it launches.`
+        : `${info?.name}: Loadout no longer changes its resolution (original restored).`);
     } catch (e) {
       reportError(e);
     }
@@ -343,8 +345,8 @@ function Content() {
           <PanelSectionRow>
             <DropdownItem layout="below" label="Resolution for this game"
               description="Written to the game's settings right away; the profile stays as it is."
-              rgOptions={[{ data: null, label: `Native (${nativeLabel(boot.display)})` },
-                ...boot.resolutions.filter((r) => height(r) < height(boot.display.resolution))
+              rgOptions={[{ data: null, label: "Keep the game's setting" },
+                ...boot.resolutions.filter((r) => height(r) <= height(boot.display.resolution))
                   .map((r) => ({ data: r, label: r }))]}
               selectedOption={game?.resolution ?? null}
               onChange={(o) => selected !== undefined && changeResolution(selected, o.data)} />
@@ -355,13 +357,9 @@ function Content() {
         <PanelSectionRow>
           <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
             selectedOption={settings.device}
+            // On the focusable dropdown, not a text row below it: the QAM only scrolls to focusable items.
+            description={`Display max: ${nativeLabel(boot.display)} (${boot.display.native})`}
             onChange={(o) => api.saveSettings(o.data).then(setSettings, reportError)} />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <Notice color="inherit">
-            Max resolution: {nativeLabel(boot.display)} ({boot.display.native}). Games use it unless you
-            pick a lower one for them. Docked, it follows the external display.
-          </Notice>
         </PanelSectionRow>
       </PanelSection>
     </>

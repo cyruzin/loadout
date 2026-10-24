@@ -44,17 +44,16 @@ should work too.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
-- Sets the game's resolution for games whose entry says where it is stored (both bundled games).
-  The ceiling is the native resolution of the screen in use, read from `/sys/class/drm`: the
-  built-in panel (shown as "handheld") or, when docked, the external display ("docked"). Settings
-  shows it as **Max resolution**. **Resolution for this game** (only for those games) offers
-  **Native** or any lower resolution; a pick above the current screen (e.g. chosen docked, used
-  handheld) is capped to native. Changing it writes it right away and leaves the applied profile
-  as it is (game closed, like any config change); applying a profile also writes it. Default
-  restores the original. After docking or undocking, a game set to Native still has the other
-  screen's resolution written (e.g. 2160p on a 1080p panel, which is slow): the panel says so and
-  **Update resolution** rewrites just the resolution of those games (a running game is skipped). The width follows the screen's aspect ratio: 720p is 1280×720 on a 16:9
-  ROG Ally and 1152×720 on a 16:10 Steam Deck.
+- Sets the game's resolution, for games whose entry says where it is stored (both bundled games),
+  only when you pick one in **Resolution for this game**. The default, **Keep the game's
+  setting**, never touches it: the game and Steam's own game-resolution setting decide. Picking a
+  resolution writes it right away and leaves the applied profile as it is (game closed, like any
+  config change); going back to Keep restores the original, and so does Default. Choices go up to
+  the display's maximum, read from `/sys/class/drm` (built-in panel, or the external display when
+  docked) and shown under Device as **Display max**; that's the screen's highest mode, not the
+  output resolution set in Steam. The width follows the screen's aspect ratio: 720p is 1280×720
+  on a 16:9 ROG Ally and 1152×720 on a 16:10 Steam Deck. If a picked resolution no longer fits
+  after docking or undocking, the panel says so and **Update resolution** rewrites it.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
 - Launch-option changes (FPS cap, env vars) apply the next time the game launches.
