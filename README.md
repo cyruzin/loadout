@@ -102,6 +102,29 @@ tests/                     pytest suite
 AGENTS.md                  rules for contributors and coding agents
 ```
 
+## Adding a game
+
+Create `py_modules/loadout/data/games/<appid>.json` (see `1245620.json`, ELDEN RING). Each profile
+can add allowlisted env vars to the launch options; per-game values win over device values. Only
+define profiles that were actually tested: list each device in `verified` (Proton version, device
+id, date) and link where the settings came from in `source`.
+
+```json
+{
+  "schema_version": 1,
+  "appid": 1245620,
+  "name": "ELDEN RING",
+  "verified": [
+    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" },
+    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
+    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
+  ],
+  "profiles": {
+    "quality": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } }
+  }
+}
+```
+
 ## Adding a device
 
 Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). Put a distinctive part

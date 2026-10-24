@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "py_modules"))
 
 import decky  # noqa: E402
-from loadout import devices, planner, steam  # noqa: E402
+from loadout import devices, games, planner, steam  # noqa: E402
 from loadout.store import JsonStore  # noqa: E402
 from loadout.validate import RESOLUTIONS  # noqa: E402
 
@@ -17,6 +17,7 @@ SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
 })
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
 DEVICES = devices.load_devices()
+GAMES = games.load_games()
 
 
 def _check_appid(appid):
@@ -33,7 +34,8 @@ def _plan(appid, profile, current):
     dev = DEVICES.get(s["device"] or "") or DEVICES[devices.GENERIC]
     res = s["games"].get(key, {}).get("resolution") or s["render_resolution"] or devices.native_class(dev)
     level, approx = devices.resolve_level(DEVICES, s["device"], profile, res)
-    return planner.build_plan(appid, profile, current, STATE.load()["games"].get(key), level, approx)
+    game_env = GAMES.get(appid, {}).get("profiles", {}).get(profile, {}).get("env")
+    return planner.build_plan(appid, profile, current, STATE.load()["games"].get(key), level, approx, game_env)
 
 
 class Plugin:

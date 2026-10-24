@@ -4,9 +4,9 @@ import shlex
 
 import pytest
 
-from loadout import devices, launch, planner, steam
+from loadout import devices, games, launch, planner, steam
 from loadout.store import JsonStore
-from loadout.validate import ValidationError, validate_device_doc, validate_env
+from loadout.validate import ValidationError, validate_device_doc, validate_env, validate_game_doc
 
 # --- env -------------------------------------------------------------------
 
@@ -92,6 +92,15 @@ def test_plan_blocked_on_corrupted_markers():
     plan = planner.build_plan(480, "quality", "LOADOUT_END=1 %command%", None, {"fps_limit": 30}, False)
     assert plan.blocked and plan.launch_options == "LOADOUT_END=1 %command%"
 
+def test_game_env_merges_and_overrides_device_env():
+    level = {"fps_limit": 30, "env": {"DXVK_ASYNC": "1", "MESA_VK_WSI_PRESENT_MODE": "fifo"}}
+    game_env = {"MESA_VK_WSI_PRESENT_MODE": "immediate", "VKD3D_FRAME_RATE": "25"}
+    plan = planner.build_plan(1245620, "quality", "", None, level, False, game_env)
+    tokens = shlex.split(plan.launch_options)
+    assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "DXVK_ASYNC=1" in tokens
+    assert "VKD3D_FRAME_RATE=25" in tokens and "DXVK_FRAME_RATE=30" in tokens
+    assert planner.build_plan(1245620, "default", "", None, level, False, game_env).launch_options == ""
+
 # --- validation ------------------------------------------------------------
 
 
@@ -131,6 +140,57 @@ def test_device_doc_missing_field():
     del doc["levels"]
     with pytest.raises(ValidationError):
         validate_device_doc(doc)
+
+def _game(**over):
+    doc = {"schema_version": 1, "appid": 480, "name": "Spacewar",
+           "source": "https://example.com/post",
+           "verified": [{"proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24"}],
+           "profiles": {"quality": {"launch": {"env": {"DXVK_ASYNC": "1"}}}, "uncapped": {}}}
+    doc.update(over)
+    return doc
+
+
+def test_game_doc_valid():
+    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}}, "uncapped": {"env": {}}}
+    bare = _game()
+    del bare["verified"], bare["source"]
+    assert validate_game_doc(bare)["verified"] == [] and validate_game_doc(bare)["source"] is None
+
+
+@pytest.mark.parametrize("over", [
+    {"extra": 1},
+    {"schema_version": 2},
+    {"appid": 0},
+    {"appid": "480"},
+    {"name": ""},
+    {"verified": {"proton": "x", "device": "x", "date": "2026-10-24"}},  # must be a list
+    {"verified": [{"proton": "x", "device": "../x", "date": "2026-10-24"}]},
+    {"verified": [{"proton": "x", "device": "x", "date": "yesterday"}]},
+    {"verified": [{"proton": "x", "device": "x"}]},
+    {"verified": [{"proton": "x", "device": "x", "date": "2026-10-24"}] * 17},
+    {"source": "http://example.com"},
+    {"source": "javascript:alert(1)"},
+    {"profiles": {"battery": {}}},
+    {"profiles": {"quality": {"files": []}}},
+    {"profiles": {"quality": {"launch": {"env": {"LD_PRELOAD": "/x.so"}}}}},
+    {"profiles": {"quality": {"launch": {"cmd": "rm -rf ~"}}}},
+])
+def test_game_doc_rejected(over):
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(**over))
+
+
+def test_game_file_name_must_match_appid(tmp_path):
+    (tmp_path / "123.json").write_text(json.dumps(_game()))
+    with pytest.raises(ValidationError):
+        games.load_games(tmp_path)
+
+
+def test_bundled_games_load():
+    er = games.load_games()[1245620]
+    assert {v["device"] for v in er["verified"]} == {"rog-xbox-ally", "steam-deck-lcd", "steam-deck-oled"}
+    for profile in ("quality", "balanced", "performance", "uncapped"):
+        assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
 
 # --- devices ---------------------------------------------------------------
 

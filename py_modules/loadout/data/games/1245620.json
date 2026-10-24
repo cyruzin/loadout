@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "appid": 1245620,
+  "name": "ELDEN RING",
+  "verified": [
+    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" },
+    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
+    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
+  ],
+  "profiles": {
+    "quality": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
+    "balanced": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
+    "performance": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
+    "uncapped": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } }
+  }
+}

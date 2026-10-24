@@ -1,4 +1,4 @@
-"""Structural + semantic validation of data documents (devices/*.json).
+"""Structural + semantic validation of data documents (devices/*.json, games/*.json).
 
 Stdlib only on purpose: no compiled deps to bundle. The same module is meant
 to run in the community data repo CI later.
@@ -16,6 +16,7 @@ ENV_DENY = {"LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "SHELL"}
 ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DEVICE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 NATIVE = re.compile(r"^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$")
+DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
 
 class ValidationError(ValueError):
@@ -88,3 +89,40 @@ def validate_device_doc(doc: Any) -> dict[str, Any]:
         clean_levels[profile] = {r: validate_level(v, f"levels.{profile}.{r}") for r, v in by_res.items()}
     return {"device": doc["device"], "name": name, "match": names,
             "native": doc["native"], "levels": clean_levels}
+
+
+def validate_game_doc(doc: Any) -> dict[str, Any]:
+    """Device-independent per-game data. Returns {appid, name, source, verified: [...], profiles: {p: {env}}}."""
+    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "profiles"},
+         {"schema_version", "appid", "name", "profiles"})
+    if doc["schema_version"] != 1:
+        raise ValidationError("unsupported schema_version")
+    appid = doc["appid"]
+    if type(appid) is not int or not 0 < appid < 2**32:
+        raise ValidationError("appid: expected positive integer")
+    name = _str(doc["name"], "name", 120)
+    source = None
+    if "source" in doc:
+        source = _str(doc["source"], "source", 300)
+        if not source.startswith("https://"):
+            raise ValidationError("source: expected https URL")
+    raw = doc.get("verified", [])
+    if not isinstance(raw, list) or len(raw) > 16:
+        raise ValidationError("verified: expected list of at most 16")
+    verified = []
+    for v in raw:
+        _obj(v, "verified[]", {"proton", "device", "date"}, {"proton", "device", "date"})
+        if not isinstance(v["device"], str) or not DEVICE_ID.match(v["device"]):
+            raise ValidationError("verified.device: invalid id")
+        if not isinstance(v["date"], str) or not DATE.match(v["date"]):
+            raise ValidationError("verified.date: expected YYYY-MM-DD")
+        verified.append({"proton": _str(v["proton"], "verified.proton", 40), "device": v["device"], "date": v["date"]})
+    profiles = _obj(doc["profiles"], "profiles", set(PROFILES))
+    clean = {}
+    for profile, body in profiles.items():
+        _obj(body, f"profiles.{profile}", {"launch"})
+        env: dict[str, str] = {}
+        if "launch" in body:
+            env = validate_env(_obj(body["launch"], f"profiles.{profile}.launch", {"env"}, {"env"})["env"])
+        clean[profile] = {"env": env}
+    return {"appid": appid, "name": name, "source": source, "verified": verified, "profiles": clean}
