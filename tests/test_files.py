@@ -80,7 +80,8 @@ def test_xml_set_preserves_every_other_byte():
 
 
 @pytest.mark.parametrize("bom, codec", [(codecs.BOM_UTF8, "utf-8"), (codecs.BOM_UTF16_LE, "utf-16-le"),
-                                        (codecs.BOM_UTF16_BE, "utf-16-be")])
+                                        (codecs.BOM_UTF16_BE, "utf-16-be"),
+                                        (b"", "utf-16-le"), (b"", "utf-16-be")])  # BOM-less UTF-16
 def test_xml_preserves_bom_and_encoding(bom, codec):
     raw = bom + CONFIG.decode().encode(codec)
     out = xmlcfg.set_values(raw, {"MotionBlur": "LOW"})
@@ -265,3 +266,49 @@ def test_app_paths(tmp_path):
         "install_dir": str(tmp_path / "steamapps/common/ELDEN RING"), "appid": "1245620"}
     assert steam.app_paths(tmp_path, 2) is None
     assert steam.app_paths(tmp_path, 3) is None
+
+# --- real-world fixture ----------------------------------------------------
+
+# ELDEN RING's GraphicsConfig.xml exactly as found on a device: UTF-16 LE *without* BOM,
+# XML declaration, CRLF. Decoding it as UTF-8 "worked" and then matched no tag at all.
+ELDEN_RING = ("""<?xml version="1.0" encoding="UTF-16"?>
+<config>
+<ScreenMode>BORDERLESS</ScreenMode>
+<Resolution-WindowScreenWidth>1280</Resolution-WindowScreenWidth>
+<Resolution-WindowScreenHeight>720</Resolution-WindowScreenHeight>
+<Auto-detectBestRenderingSettings>OFF</Auto-detectBestRenderingSettings>
+<QualitySetting>CUSTOM</QualitySetting>
+<TextureQuality>HIGH</TextureQuality>
+<Antialiasing>HIGH</Antialiasing>
+<SSAO>DISABLE</SSAO>
+<DepthOfField>DISABLE</DepthOfField>
+<MotionBlur>HIGH</MotionBlur>
+<ShadowQuality>LOW</ShadowQuality>
+<LightingQuality>MEDIUM</LightingQuality>
+<EffectsQuality>MEDIUM</EffectsQuality>
+<ReflectionQuality>LOW</ReflectionQuality>
+<WaterSurfaceQuality>HIGH</WaterSurfaceQuality>
+<ShadeQuality>LOW</ShadeQuality>
+<VolumetricEffectQuality>MEDIUM</VolumetricEffectQuality>
+<RaytracingQuality>DISABLE</RaytracingQuality>
+<GIDataQuality>LOW</GIDataQuality>
+<GrassQuality>MEDIUM</GrassQuality>
+</config>
+""").replace("\n", "\r\n").encode("utf-16-le")
+
+
+def test_elden_ring_real_file_quality_round_trip(tmp_path):
+    from loadout import games
+    assert ELDEN_RING[:4] == b"<\x00?\x00"  # same first bytes as the device's xxd
+    spec = games.load_games()[1245620]["profiles"]["quality"]["files"]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(ELDEN_RING)
+
+    plan = apply(spec, ctx, {})
+    assert [(c.key, c.old, c.new) for c in plan.changes] == [("MotionBlur", "HIGH", "DISABLE")]
+    assert cfg.read_bytes() == ELDEN_RING.decode("utf-16-le").replace(
+        "<MotionBlur>HIGH<", "<MotionBlur>DISABLE<").encode("utf-16-le")  # still no BOM, still CRLF
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == ELDEN_RING

@@ -17,6 +17,12 @@ def _decode(raw: bytes) -> tuple[str, str]:
         return raw.decode("utf-16"), "utf-16"
     if raw.startswith(codecs.BOM_UTF8):
         return raw.decode("utf-8-sig"), "utf-8-sig"
+    # UTF-16 without a BOM: the file starts with "<", so one byte of the first pair is NUL.
+    # Decoding it as UTF-8 "works" (NUL is valid) but no tag would ever match.
+    if raw[:2] == b"<\x00":
+        return raw.decode("utf-16-le"), "utf-16-le"
+    if raw[:2] == b"\x00<":
+        return raw.decode("utf-16-be"), "utf-16-be"
     return raw.decode("utf-8"), "utf-8"
 
 

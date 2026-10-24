@@ -10,7 +10,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `validate.py` device/game doc schema + env allow/deny rules
   - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile)
   - `paths.py` token expansion + `safe_path` (resolve symlinks, must stay in prefix/install dir)
-  - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
+  - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check;
+    UTF-8 or UTF-16, with or without BOM; ELDEN RING writes UTF-16 LE without BOM)
   - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback
   - `launch.py` marker-delimited launch-option block (build / strip / restore)
   - `planner.py` pure `build_plan` (dry-run, never writes)
@@ -44,6 +45,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   `xml.etree` already crashed the plugin on a real device. Adding a module means proving it ships.
 - Never invent device or game values; every data entry needs a real source. Config keys and
   their accepted values (`options`) are copied from a real config file / the in-game menu.
+- Test fixtures for game files must match the real file's BYTES (encoding, BOM, line endings),
+  not text pasted from a terminal: check with `xxd` on the device first.
 
 ## Scope
 IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML config keys,
