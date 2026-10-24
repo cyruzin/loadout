@@ -8,6 +8,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from . import xmlcfg
+from .paths import ROOT_TOKENS, expand
+
 PROFILES = ("quality", "balanced", "performance", "uncapped")
 RESOLUTIONS = ("720p", "800p", "1080p", "1200p", "1440p", "1600p", "2160p")
 
@@ -91,9 +94,62 @@ def validate_device_doc(doc: Any) -> dict[str, Any]:
             "native": doc["native"], "levels": clean_levels}
 
 
+def _path_template(x: Any, where: str) -> str:
+    path = _str(x, where, 300)
+    if not path.startswith(ROOT_TOKENS) or "\\" in path or any(seg in ("..", ".") for seg in path.split("/")):
+        raise ValidationError(f"{where}: must start with {{prefix}}/ or {{install_dir}}/, no . or ..")
+    try:
+        expand(path, {"prefix": "", "install_dir": "", "appid": ""})
+    except ValueError as e:
+        raise ValidationError(f"{where}: {e}") from None
+    return path
+
+
+def validate_options(x: Any) -> dict[str, dict[str, list[str]]]:
+    """Accepted values per key, per config file: {path: {key: [values]}}. Copied from the game."""
+    if not isinstance(x, dict) or len(x) > 8:
+        raise ValidationError("options: expected object with at most 8 files")
+    out = {}
+    for path, keys in x.items():
+        _path_template(path, "options path")
+        if not isinstance(keys, dict) or len(keys) > 64:
+            raise ValidationError(f"options[{path}]: expected object with at most 64 keys")
+        for k, vals in keys.items():
+            if not isinstance(k, str) or not xmlcfg.KEY.match(k):
+                raise ValidationError(f"options: invalid key {k!r}")
+            if (not isinstance(vals, list) or not 0 < len(vals) <= 16
+                    or not all(isinstance(s, str) and xmlcfg.VALUE.match(s) for s in vals)):
+                raise ValidationError(f"options.{k}: expected list of 1..16 values")
+        out[path] = {k: list(vals) for k, vals in keys.items()}
+    return out
+
+
+def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
+    """Shape and meaning of config-file edits. Containment is checked again at apply time."""
+    if not isinstance(x, list) or len(x) > 8:
+        raise ValidationError(f"{where}: expected list of at most 8")
+    out = []
+    for i, f in enumerate(x):
+        w = f"{where}[{i}]"
+        _obj(f, w, {"path", "format", "set"}, {"path", "format", "set"})
+        path = _path_template(f["path"], f"{w}.path")
+        if f["format"] != "xml":
+            raise ValidationError(f"{w}.format: only 'xml' is supported")
+        values = f["set"]
+        if not isinstance(values, dict) or not 0 < len(values) <= 64:
+            raise ValidationError(f"{w}.set: expected 1..64 keys")
+        for k, val in values.items():
+            if not isinstance(k, str) or not xmlcfg.KEY.match(k):
+                raise ValidationError(f"{w}.set: invalid key {k!r}")
+            if not isinstance(val, str) or not xmlcfg.VALUE.match(val):
+                raise ValidationError(f"{w}.set.{k}: invalid value")
+        out.append({"path": path, "format": "xml", "set": dict(values)})
+    return out
+
+
 def validate_game_doc(doc: Any) -> dict[str, Any]:
-    """Device-independent per-game data. Returns {appid, name, source, verified: [...], profiles: {p: {env}}}."""
-    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "profiles"},
+    """Device-independent per-game data. Returns {appid, name, source, verified: [...], profiles: {p: {env, files}}}."""
+    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "options", "profiles"},
          {"schema_version", "appid", "name", "profiles"})
     if doc["schema_version"] != 1:
         raise ValidationError("unsupported schema_version")
@@ -117,12 +173,18 @@ def validate_game_doc(doc: Any) -> dict[str, Any]:
         if not isinstance(v["date"], str) or not DATE.match(v["date"]):
             raise ValidationError("verified.date: expected YYYY-MM-DD")
         verified.append({"proton": _str(v["proton"], "verified.proton", 40), "device": v["device"], "date": v["date"]})
+    options = validate_options(doc.get("options", {}))
     profiles = _obj(doc["profiles"], "profiles", set(PROFILES))
     clean = {}
     for profile, body in profiles.items():
-        _obj(body, f"profiles.{profile}", {"launch"})
+        _obj(body, f"profiles.{profile}", {"launch", "files"})
         env: dict[str, str] = {}
         if "launch" in body:
             env = validate_env(_obj(body["launch"], f"profiles.{profile}.launch", {"env"}, {"env"})["env"])
-        clean[profile] = {"env": env}
+        clean[profile] = {"env": env, "files": validate_files(body.get("files", []), f"profiles.{profile}.files")}
+        for f in clean[profile]["files"]:
+            for k, val in f["set"].items():
+                allowed = options.get(f["path"], {}).get(k)
+                if allowed is not None and val not in allowed:
+                    raise ValidationError(f"profiles.{profile}: {k}={val} not in {allowed}")
     return {"appid": appid, "name": name, "source": source, "verified": verified, "profiles": clean}

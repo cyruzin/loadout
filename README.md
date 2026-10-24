@@ -19,6 +19,10 @@ should work too.
 
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
+- Edits in-game graphics settings for games that have a data entry (XML configs inside the Proton
+  prefix, e.g. ELDEN RING's `GraphicsConfig.xml`). Only the listed keys change, each original value
+  is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs.
+  Default puts every key back unless the game changed it since.
 - Shows a dry-run diff and asks for confirmation before changing anything.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm it on first run.
@@ -49,8 +53,8 @@ pacing smooth.
 
 Values live in `py_modules/loadout/data/devices/*.json`.
 
-Not in the MVP yet: community data repo download, per-game config file edits (ini/json), TDP,
-global/batch profiles, export/import.
+Not in the MVP yet: community data repo download, ini/json config files, TDP, global/batch profiles,
+export/import.
 
 ## Requirements
 
@@ -123,7 +127,11 @@ AGENTS.md                  rules for contributors and coding agents
 ## Adding a game
 
 Create `py_modules/loadout/data/games/<appid>.json` (see `1245620.json`, ELDEN RING). Each profile
-can add allowlisted env vars to the launch options; per-game values win over device values. Only
+can add allowlisted env vars to the launch options (per-game values win over device values) and
+set keys in the game's XML config files. Paths must start with `{prefix}/` (the game's Proton
+prefix) or `{install_dir}/`; keys must already exist in the file (copy them from a real config,
+never guess). Optionally list the values each key accepts in `options` (keyed by the same path);
+profiles that set anything outside that list are rejected. Only
 define profiles that were actually tested: list each device in `verified` (Proton version, device
 id, date) and link where the settings came from in `source`.
 
@@ -138,7 +146,14 @@ id, date) and link where the settings came from in `source`.
     { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
   ],
   "profiles": {
-    "quality": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } }
+    "quality": {
+      "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
+      "files": [{
+        "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+        "format": "xml",
+        "set": { "MotionBlur": "DISABLE", "ShadowQuality": "LOW" }
+      }]
+    }
   }
 }
 ```

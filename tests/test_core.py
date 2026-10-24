@@ -141,6 +141,10 @@ def test_device_doc_missing_field():
     with pytest.raises(ValidationError):
         validate_device_doc(doc)
 
+def _xml(path, fmt="xml", values=None):
+    return {"path": path, "format": fmt, "set": {"A": "1"} if values is None else values}
+
+
 def _game(**over):
     doc = {"schema_version": 1, "appid": 480, "name": "Spacewar",
            "source": "https://example.com/post",
@@ -151,7 +155,8 @@ def _game(**over):
 
 
 def test_game_doc_valid():
-    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}}, "uncapped": {"env": {}}}
+    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "files": []},
+                                                      "uncapped": {"env": {}, "files": []}}
     bare = _game()
     del bare["verified"], bare["source"]
     assert validate_game_doc(bare)["verified"] == [] and validate_game_doc(bare)["source"] is None
@@ -171,13 +176,42 @@ def test_game_doc_valid():
     {"source": "http://example.com"},
     {"source": "javascript:alert(1)"},
     {"profiles": {"battery": {}}},
-    {"profiles": {"quality": {"files": []}}},
+    {"profiles": {"quality": {"files": {}}}},
+    {"profiles": {"quality": {"files": [_xml("/etc/passwd")]}}},
+    {"profiles": {"quality": {"files": [_xml("{home}/.bashrc")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/../../.bashrc")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/./x.xml")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/a\\b.xml")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/{pre{prefix}fix}.xml")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", fmt="ini")]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"A": "<b>"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"A": "x&y"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"a b": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml")] * 9}}},
     {"profiles": {"quality": {"launch": {"env": {"LD_PRELOAD": "/x.so"}}}}},
     {"profiles": {"quality": {"launch": {"cmd": "rm -rf ~"}}}},
 ])
 def test_game_doc_rejected(over):
     with pytest.raises(ValidationError):
         validate_game_doc(_game(**over))
+
+
+def test_game_options_restrict_values():
+    files = {"quality": {"files": [_xml("{prefix}/x.xml", values={"Grass": "LOW", "Other": "ANY"})]}}
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(profiles=files, options={"{prefix}/x.xml": {"Grass": ["MEDIUM", "HIGH", "MAX"]}}))
+    ok = {"quality": {"files": [_xml("{prefix}/x.xml", values={"Grass": "MAX", "Other": "ANY"})]}}
+    validate_game_doc(_game(profiles=ok, options={"{prefix}/x.xml": {"Grass": ["MEDIUM", "HIGH", "MAX"]}}))
+
+
+@pytest.mark.parametrize("options", [
+    [], {"/etc/x.xml": {}}, {"{prefix}/x.xml": {"a b": ["X"]}}, {"{prefix}/x.xml": {"A": []}},
+    {"{prefix}/x.xml": {"A": "X"}}, {"{prefix}/x.xml": {"A": ["<x>"]}},
+])
+def test_game_options_rejected(options):
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(options=options))
 
 
 def test_game_file_name_must_match_appid(tmp_path):

@@ -7,8 +7,54 @@
     { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
     { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
   ],
+  "options": {
+    "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml": {
+      "TextureQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
+      "Antialiasing": ["DISABLE", "LOW", "HIGH"],
+      "SSAO": ["DISABLE", "MEDIUM", "HIGH", "MAX"],
+      "DepthOfField": ["DISABLE", "LOW", "MEDIUM", "HIGH", "MAX"],
+      "MotionBlur": ["DISABLE", "LOW", "MEDIUM", "HIGH"],
+      "ShadowQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
+      "LightingQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
+      "EffectsQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
+      "VolumetricEffectQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
+      "ReflectionQuality": ["LOW", "HIGH", "MAX"],
+      "WaterSurfaceQuality": ["LOW", "HIGH"],
+      "ShadeQuality": ["LOW", "MEDIUM", "HIGH"],
+      "GIDataQuality": ["LOW", "MEDIUM", "HIGH"],
+      "GrassQuality": ["MEDIUM", "HIGH", "MAX"]
+    }
+  },
   "profiles": {
-    "quality": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
+    "quality": {
+      "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
+      "files": [
+        {
+          "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+          "format": "xml",
+          "set": {
+            "ScreenMode": "BORDERLESS",
+            "Auto-detectBestRenderingSettings": "OFF",
+            "QualitySetting": "CUSTOM",
+            "TextureQuality": "HIGH",
+            "Antialiasing": "HIGH",
+            "SSAO": "DISABLE",
+            "DepthOfField": "DISABLE",
+            "MotionBlur": "DISABLE",
+            "ShadowQuality": "LOW",
+            "LightingQuality": "MEDIUM",
+            "EffectsQuality": "MEDIUM",
+            "ReflectionQuality": "LOW",
+            "WaterSurfaceQuality": "HIGH",
+            "ShadeQuality": "LOW",
+            "VolumetricEffectQuality": "MEDIUM",
+            "RaytracingQuality": "DISABLE",
+            "GIDataQuality": "LOW",
+            "GrassQuality": "MEDIUM"
+          }
+        }
+      ]
+    },
     "balanced": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
     "performance": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } },
     "uncapped": { "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } } }

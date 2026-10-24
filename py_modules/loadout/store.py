@@ -1,12 +1,31 @@
-"""JSON files written atomically (temp file in the same folder + os.replace)."""
+"""Atomic file writes and the JSON settings/state files built on them."""
 from __future__ import annotations
 
 import copy
 import json
 import os
+import stat
 import tempfile
 from pathlib import Path
 from typing import Any
+
+
+def atomic_write(path: Path, data: bytes) -> None:
+    """Temp file in the same folder + os.replace; keeps the existing file's permissions."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.chmod(tmp, stat.S_IMODE(os.stat(path).st_mode))
+        except FileNotFoundError:
+            pass
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
 
 
 class JsonStore:
@@ -29,13 +48,4 @@ class JsonStore:
 
     def save(self, data: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=f".{self.path.name}.")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, sort_keys=True)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp, self.path)
-        except BaseException:
-            os.unlink(tmp)
-            raise
+        atomic_write(self.path, json.dumps(data, indent=2, sort_keys=True).encode("utf-8"))

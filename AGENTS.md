@@ -8,7 +8,10 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - `main.py` - thin Decky adapter. The only file that imports `decky`.
 - `py_modules/loadout/` - pure core (never imports `decky`):
   - `validate.py` device/game doc schema + env allow/deny rules
-  - `games.py` loads `data/games/<appid>.json` (per-game env per profile)
+  - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile)
+  - `paths.py` token expansion + `safe_path` (resolve symlinks, must stay in prefix/install dir)
+  - `xmlcfg.py` flat XML read/set that preserves every other byte
+  - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback
   - `launch.py` marker-delimited launch-option block (build / strip / restore)
   - `planner.py` pure `build_plan` (dry-run, never writes)
   - `devices.py` DMI detection, device table, level fallback chain
@@ -27,15 +30,18 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - Validate data structurally and semantically before use. Unknown fields are rejected.
 - Never use str.format, eval, exec, pickle, yaml.load or shell=True with data.
 - Env vars: allowlist prefixes + denylist; values quoted with shlex.quote in launch options.
-- Writes are atomic (temp file + os.replace). Backups are per key, never whole files.
+- Writes are atomic (temp file + os.replace), all-or-nothing, never while the game runs.
+  Backups are per key, never whole files.
+- Paths from data go through `safe_path` (prefix/install dir only); files are opened with O_NOFOLLOW.
 - No root (`plugin.json` flags are empty). No compiled Python deps.
 - Never invent device or game values; every data entry needs a real source.
 
 ## Scope
-IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, launch options, settings file,
+IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML config keys,
+launch options, settings file,
 device detection, preferred render resolution.
-LATER (do not build unless asked): community data download + SHA-256, per-game config files
-(ini/json), TDP, global/batch profile, export/import.
+LATER (do not build unless asked): community data download + SHA-256, ini/json config handlers,
+Wine registry, TDP, global/batch profile, export/import.
 
 ## Known unknowns (do NOT guess; flag them)
 - Steam frontend APIs (`SteamClient.Apps.*`) are not a public contract.

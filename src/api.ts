@@ -33,6 +33,7 @@ export interface Plan {
   changes: Change[];
   warnings: string[];
   blocked: boolean;
+  file_writes: [path: string, values: Record<string, string>][];
 }
 export interface ApplyResult { launch_options: string; warnings: string[]; applied: boolean }
 

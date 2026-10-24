@@ -14,12 +14,15 @@ import * as api from "./api";
 
 const errorToast = (e: unknown) => toaster.toast({ title: "Loadout", body: String(e) });
 
-function describe(plan: api.Plan) {
+function describe(plan: api.Plan, running: boolean) {
   const env = plan.changes.filter((c) => c.kind === "env");
   const launch = plan.changes.find((c) => c.kind === "launch_option");
+  const fileKeys = plan.changes.filter((c) => c.kind === "file_key");
   return (
     <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
       {env.map((c) => <div key={c.key}>{c.key} = {c.new}</div>)}
+      {fileKeys.length > 0 && <div style={{ marginTop: 8 }}>Game settings ({fileKeys[0].target.split("/").pop()}):</div>}
+      {fileKeys.map((c) => <div key={c.target + c.key}>{c.key}: {c.old} → {c.new}</div>)}
       {launch ? (
         <>
           <div style={{ marginTop: 8 }}>Launch options before:</div>
@@ -29,6 +32,7 @@ function describe(plan: api.Plan) {
         </>
       ) : <div>Nothing to change.</div>}
       {plan.warnings.map((w) => <div key={w} style={{ marginTop: 8, color: "#e8a33d" }}>{w}</div>)}
+      {running && <div style={{ marginTop: 8, color: "#e8a33d" }}>Close the game first: it would overwrite its settings on exit.</div>}
       <div style={{ marginTop: 8 }}>Changes apply the next time the game is launched.</div>
     </div>
   );
@@ -89,11 +93,13 @@ function Content() {
     try {
       const before = await api.getLaunchOptions(appid);
       const plan = await api.planProfile(appid, profile, before);
+      // Game config files are never written while the game runs (many games rewrite them on exit).
+      const running = plan.file_writes.length > 0 && window.SteamUIStore?.MainRunningAppID === appid;
       showModal(
         <ConfirmModal
           strTitle={`Apply ${api.PROFILES.find((p) => p.id === profile)?.label}?`}
-          strDescription={describe(plan)}
-          bOKDisabled={plan.blocked}
+          strDescription={describe(plan, running)}
+          bOKDisabled={plan.blocked || running}
           onOK={async () => {
             try {
               // Re-read: the user may have edited launch options while the dialog was open.

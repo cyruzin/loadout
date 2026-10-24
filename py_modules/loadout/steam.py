@@ -87,3 +87,19 @@ def list_games(steam_root: Path) -> list[dict[str, Any]]:
             if isinstance(name, str) and name and not name.startswith(TOOL_PREFIXES):
                 games[appid] = name
     return sorted(({"appid": a, "name": n} for a, n in games.items()), key=lambda g: g["name"].lower())
+
+
+def app_paths(steam_root: Path, appid: int) -> Optional[dict[str, str]]:
+    """Token context for one game: its Proton prefix and install folder, in whichever library holds it."""
+    for lib in library_paths(steam_root):
+        mf = lib / "steamapps" / f"appmanifest_{appid}.acf"
+        try:
+            installdir = _root_block(mf)["installdir"]
+        except (OSError, ValueError, KeyError):
+            continue
+        if not isinstance(installdir, str) or not installdir or "/" in installdir or installdir in (".", ".."):
+            return None
+        return {"prefix": str(lib / "steamapps/compatdata" / str(appid) / "pfx"),
+                "install_dir": str(lib / "steamapps/common" / installdir),
+                "appid": str(appid)}
+    return None
