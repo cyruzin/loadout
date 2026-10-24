@@ -34,8 +34,8 @@ should work too.
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
 - Edits in-game graphics settings for games that have a data entry: XML configs (e.g. ELDEN
   RING's `GraphicsConfig.xml` in the Proton prefix) and INI configs (e.g. Lies of P's Unreal
-  Engine `GameUserSettings.ini` in the install folder). Only the listed keys change, each original value
-  is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs
+  Engine `GameUserSettings.ini` in the install folder). Only the listed keys change, each original
+  value is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs
   (the confirmation asks you to close it). Default puts every key back unless the game changed it
   since.
 - Never acts on its own: nothing runs when a game starts or exits. Settings you change in the game's
@@ -45,11 +45,16 @@ should work too.
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
 - Sets the game's resolution for games whose entry says where it is stored (both bundled games).
-  The global **Game resolution** (asked during setup, changeable in Settings) applies to all of
-  them; **Resolution for this game** overrides it and only appears for those games. It's written
-  together with the profile (apply the profile again after changing it) and Default restores the
-  original. The width follows your panel's aspect ratio: 720p is 1280×720 on a 16:9 ROG Ally and
-  1152×720 on a 16:10 Steam Deck.
+  The ceiling is the native resolution of the screen in use, read from `/sys/class/drm`: the
+  built-in panel (shown as "handheld") or, when docked, the external display ("docked"). Settings
+  shows it as **Max resolution**. **Resolution for this game** (only for those games) offers
+  **Native** or any lower resolution; a pick above the current screen (e.g. chosen docked, used
+  handheld) is capped to native. Changing it writes it right away and leaves the applied profile
+  as it is (game closed, like any config change); applying a profile also writes it. Default
+  restores the original. After docking or undocking, a game set to Native still has the other
+  screen's resolution written (e.g. 2160p on a 1080p panel, which is slow): the panel says so and
+  **Update resolution** rewrites just the resolution of those games (a running game is skipped). The width follows the screen's aspect ratio: 720p is 1280×720 on a 16:9
+  ROG Ally and 1152×720 on a 16:10 Steam Deck.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
 - Launch-option changes (FPS cap, env vars) apply the next time the game launches.
@@ -88,6 +93,7 @@ What a profile does depends on whether the game has a Loadout entry in
 | FPS cap from the device table | yes | yes |
 | Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
 | In-game graphics settings (config file edits) | yes, where the entry defines them | no |
+| Game resolution written to the game's config | yes, where the entry maps it | no |
 
 In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
 you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list

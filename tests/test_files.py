@@ -467,3 +467,64 @@ def test_elden_ring_resolution_keys_exist_in_the_real_file(tmp_path):
     assert text.count(">1280<") == 3 and text.count(">800<") == 3 and ">720<" not in text
     apply([], ctx, plan.state)
     assert cfg.read_bytes() == ELDEN_RING
+
+
+def _lop(tmp_path):
+    from loadout import games
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "game/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(LIES_OF_P)
+    return games.load_games()[1627720], ctx, cfg
+
+
+def _res(doc, name):
+    from loadout import devices, games
+    return games.resolution_files(doc, *devices.resolution_size(name, "1920x1080"))
+
+
+def test_resolution_alone_keeps_the_applied_profile(tmp_path):
+    doc, ctx, cfg = _lop(tmp_path)
+    balanced = apply(doc["profiles"]["balanced"]["files"] + _res(doc, "720p"), ctx, {})
+    before = cfg.read_bytes().decode()
+
+    plan = files.plan_keys(_res(doc, "1080p"), ctx, balanced.state)
+    assert {c.key.split("]")[1] for c in plan.changes} == {
+        "ResolutionSizeX", "ResolutionSizeY", "LastUserConfirmedResolutionSizeX", "LastUserConfirmedResolutionSizeY"}
+    files.apply_writes(plan.writes)
+    after = cfg.read_bytes().decode()
+    assert after == before.replace("ResolutionSizeX=1280", "ResolutionSizeX=1920").replace(
+        "ResolutionSizeY=720", "ResolutionSizeY=1080")  # graphics untouched, only resolution moved
+    # Originals are still the pre-Loadout ones, so Default restores everything.
+    assert plan.state.keys() == balanced.state.keys()
+    for path, keys in balanced.state.items():
+        for key, entry in keys.items():
+            assert plan.state[path][key]["old"] == entry["old"], key
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == LIES_OF_P
+
+
+def test_resolution_alone_without_a_profile(tmp_path):
+    doc, ctx, cfg = _lop(tmp_path)
+    plan = files.plan_keys(_res(doc, "720p"), ctx, {})
+    files.apply_writes(plan.writes)
+    assert "ResolutionSizeX=1280\r\n" in cfg.read_bytes().decode()
+    assert "sg.ShadowQuality=1\r\n" in cfg.read_bytes().decode()  # graphics as the user had them
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == LIES_OF_P
+
+
+def test_resolution_alone_does_not_touch_other_files_with_the_same_key(tmp_path):
+    doc, ctx, cfg = _lop(tmp_path)
+    other = tmp_path / "pfx/other.ini"
+    other.write_bytes(b"[/Script/ProjectP.LGameUserSettings]\r\nResolutionSizeX=640\r\n")
+    previous = {str(other.resolve()): {"[/Script/ProjectP.LGameUserSettings]ResolutionSizeX":
+                                       {"old": "320", "new": "640"}}}
+    plan = files.plan_keys(_res(doc, "720p"), ctx, previous)
+    files.apply_writes(plan.writes)
+    assert other.read_bytes() == b"[/Script/ProjectP.LGameUserSettings]\r\nResolutionSizeX=640\r\n"
+    assert plan.state[str(other.resolve())] == previous[str(other.resolve())]
+
+
+def test_plan_keys_needs_the_game_folder():
+    assert files.plan_keys([{"path": "{prefix}/x.ini", "format": "ini", "set": {"[S]A": "1"}}], None, {}).error

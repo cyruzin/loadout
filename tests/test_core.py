@@ -283,6 +283,16 @@ def test_lies_of_p_profiles_match_the_tested_presets():
     assert sg("balanced", "Shadow") == "0" and sg("quality", "Shadow") == "1"
 
 
+def test_resolution_stale():
+    res_1080 = [{"path": "p", "format": "ini", "set": {"[S]X": "1920", "[S]Y": "1080"}}]
+    written = lambda x, y: {"/g.ini": {"[S]X": {"old": "1280", "new": x}, "[S]Y": {"old": "720", "new": y},
+                                       "[S]sg.Shadow": {"old": "1", "new": "0"}}}
+    assert games.resolution_stale(written("3840", "2160"), res_1080)  # written docked, now handheld
+    assert not games.resolution_stale(written("1920", "1080"), res_1080)
+    assert not games.resolution_stale({"/g.ini": {"[S]sg.Shadow": {"old": "1", "new": "0"}}}, res_1080)  # never wrote it
+    assert not games.resolution_stale({}, res_1080) and not games.resolution_stale(written("3840", "2160"), [])
+
+
 def test_bundled_games_load():
     er = games.load_games()[1245620]
     # Every bundled device except the generic fallback (which isn't a device anyone can verify on).
@@ -324,6 +334,46 @@ def test_bundled_devices_load_and_detect():
 ])
 def test_resolution_size_keeps_the_panel_aspect(res, native, size):
     assert devices.resolution_size(res, native) == size
+
+
+def _connector(root, name, status, modes=""):
+    d = root / name
+    d.mkdir()
+    (d / "status").write_text(status + "\n")
+    (d / "modes").write_text(modes)
+
+
+def test_read_display_builtin_panel(tmp_path):
+    _connector(tmp_path, "card1-eDP-1", "connected", "1920x1080\n1280x720\n")
+    _connector(tmp_path, "card1-DP-1", "disconnected")
+    assert devices.read_display(tmp_path) == ("1920x1080", False)
+
+
+def test_read_display_docked_prefers_external(tmp_path):
+    _connector(tmp_path, "card1-eDP-1", "connected", "1920x1080\n")
+    _connector(tmp_path, "card1-HDMI-A-1", "connected", "3840x2160\n2560x1440\n1920x1080\n")
+    assert devices.read_display(tmp_path) == ("3840x2160", True)
+
+
+@pytest.mark.parametrize("modes", ["", "garbage\n", "0x0\n"])
+def test_read_display_ignores_bad_modes(tmp_path, modes):
+    _connector(tmp_path, "card1-DP-1", "connected", modes)
+    _connector(tmp_path, "card1-eDP-1", "connected", "1280x800\n")
+    assert devices.read_display(tmp_path) == ("1280x800", False)
+
+
+def test_read_display_nothing(tmp_path):
+    assert devices.read_display(tmp_path) is None
+    assert devices.read_display(tmp_path / "missing") is None
+
+
+@pytest.mark.parametrize("pick, native, expected", [
+    (None, "1920x1080", "1080p"), ("720p", "1920x1080", "720p"),
+    ("1440p", "1920x1080", "1080p"),  # never above the screen (undocked after picking a TV resolution)
+    ("1440p", "3840x2160", "1440p"), (None, "1280x800", "800p"),
+])
+def test_clamp_resolution(pick, native, expected):
+    assert devices.clamp_resolution(pick, native) == expected
 
 
 def test_read_dmi(tmp_path):

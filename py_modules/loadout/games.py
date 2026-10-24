@@ -27,6 +27,14 @@ def resolution_files(doc: Optional[dict[str, Any]], width: int, height: int) -> 
             for r in (doc or {}).get("resolution", [])]
 
 
+def resolution_stale(written: dict[str, dict[str, dict[str, str]]], res_files: list[dict[str, Any]]) -> bool:
+    """Loadout wrote a resolution for this game that differs from what it would write now (e.g.
+    "Native" written while docked, now handheld). In-game changes don't count: only what Loadout
+    itself wrote (`written`, the state's per-key {"old", "new"}) is compared."""
+    ours = {k: v["new"] for keys in written.values() for k, v in keys.items()}
+    return any(k in ours and ours[k] != value for f in res_files for k, value in f["set"].items())
+
+
 GAME_FILTERS = ("verified", "loadout", "all")  # cumulative: each one shows more games
 
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -27,6 +28,39 @@ def read_dmi(root: Path = Path("/sys/class/dmi/id")) -> str:
         return (root / "product_name").read_text(encoding="utf-8", errors="replace").strip()
     except OSError:
         return ""
+
+
+# Built-in panels; anything else connected (HDMI, DP, USB-C) is an external display.
+_INTERNAL = ("eDP", "LVDS", "DSI")
+_MODE = re.compile(r"^([1-9][0-9]{2,4})x([1-9][0-9]{2,4})")
+
+
+def read_display(root: Path = Path("/sys/class/drm")) -> Optional[tuple[str, bool]]:
+    """("WIDTHxHEIGHT", external) of the screen in use: a connected external display wins over the
+    built-in panel (docked). Plain sysfs reads; the first listed mode is the preferred one."""
+    found: dict[bool, str] = {}
+    for conn in sorted(root.glob("card*-*")):
+        try:
+            if (conn / "status").read_text().strip() != "connected":
+                continue
+            m = _MODE.match((conn / "modes").read_text().split("\n", 1)[0])
+        except OSError:
+            continue
+        external = not any(t in conn.name for t in _INTERNAL)
+        if m and external not in found:
+            found[external] = f"{m.group(1)}x{m.group(2)}"
+    for external in (True, False):
+        if external in found:
+            return found[external], external
+    return None
+
+
+def clamp_resolution(resolution: Optional[str], native: str) -> str:
+    """The game's resolution class: its own pick, never above the screen's native height."""
+    native_class = native.split("x")[1] + "p"
+    if resolution is None or int(resolution.rstrip("p")) > int(native_class.rstrip("p")):
+        return native_class
+    return resolution
 
 
 def detect(devices: dict[str, dict[str, Any]], product_name: str) -> Optional[str]:

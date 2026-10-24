@@ -16,7 +16,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
     writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
   - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
   - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused
-  - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback
+  - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback; `plan_keys`
+    changes only some keys (resolution) and keeps everything else Loadout set, originals included
   - `launch.py` marker-delimited launch-option block (build / strip / restore)
   - `planner.py` pure `build_plan` (dry-run, never writes)
   - `devices.py` DMI detection, device table, level fallback chain
@@ -30,6 +31,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   `layout="below"` so long values aren't cut off. Keep dropdowns short: every filter caps its list
   to the 50 most recently played (`LIST_LIMIT`) and offers a search past that; a D-pad can't scroll
   hundreds of items, and the verified list will grow too.
+  Report every outcome with `report()` / `reportError()`: they write the in-panel status line and
+  toast. Never rely on a toast alone (Steam can play its sound without showing it with the QAM open).
 
 ## Commands
     pnpm install && pnpm run build     # frontend -> dist/index.js
@@ -57,7 +60,10 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 ## Scope
 IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML/INI config keys,
 launch options, settings file,
-device detection, game resolution written to config files (games whose entry has `resolution`).
+device detection, game resolution written to config files (games whose entry has `resolution`),
+capped to the native resolution of the screen in use (`read_display`: external display when docked).
+Screen changes are never acted on silently: `games.resolution_stale` flags games whose resolution
+Loadout wrote for another screen, and the UI offers "Update resolution".
 LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
 Wine registry, global/batch profile, export/import.
 OUT (maintainer decision): TDP and other power settings; the user handles those in Steam's QAM.
@@ -70,6 +76,8 @@ OUT (maintainer decision): TDP and other power settings; the user handles those 
 - Which resolution keys a game actually reads: Lies of P uses ResolutionSizeX/Y (+ LastUserConfirmed)
   and ELDEN RING the Window/FullScreen/Borderless pairs; confirm on device after adding a game.
   `SteamClient.Apps.SetAppResolutionOverride` (Steam-level) is untested and not used.
+- `/sys/class/drm` display detection (connector `status` + first line of `modes`) is unit-tested
+  with fixtures but not yet confirmed on a docked device.
 
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.

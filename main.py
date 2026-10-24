@@ -13,7 +13,7 @@ from loadout.validate import RESOLUTIONS  # noqa: E402
 
 # Intent only (forward-compatible, later the export format). Backups live in STATE.
 SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
-    "schema_version": 1, "device": None, "render_resolution": None, "global_profile": None, "games": {},
+    "schema_version": 1, "device": None, "global_profile": None, "games": {},
     "game_filter": "verified",
 })
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
@@ -27,30 +27,53 @@ def _check_appid(appid):
     return str(appid)
 
 
+def _display(s):
+    """(native "WxH", external) of the screen in use right now, else the device's own panel."""
+    dev = DEVICES.get(s["device"] or "") or DEVICES[devices.GENERIC]
+    return devices.read_display() or (dev["native"], False)
+
+
+def _resolution(appid, s, native=None):
+    """(resolution class, file edits that write it) for this game: its own pick or the native
+    resolution of the screen in use (docked: the external display), never above native."""
+    native = native or _display(s)[0]
+    res = devices.clamp_resolution(s["games"].get(str(appid), {}).get("resolution"), native)
+    return res, games.resolution_files(GAMES.get(appid), *devices.resolution_size(res, native))
+
+
+def _ctx(appid):
+    root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
+    return steam.app_paths(root, appid) if root else None
+
+
 def _plan(appid, profile, current):
     key = _check_appid(appid)
     if not isinstance(current, str) or len(current) > 4096:
         raise ValueError("invalid launch options")
     s = SETTINGS.load()
-    dev = DEVICES.get(s["device"] or "") or DEVICES[devices.GENERIC]
-    res = s["games"].get(key, {}).get("resolution") or s["render_resolution"] or devices.native_class(dev)
+    res, res_files = _resolution(appid, s)
     level, approx = devices.resolve_level(DEVICES, s["device"], profile, res)
     spec = GAMES.get(appid, {}).get("profiles", {}).get(profile, {})
     specs = list(spec.get("files", []))
     if profile != "default":  # Default restores the original resolution with everything else
-        specs += games.resolution_files(GAMES.get(appid), *devices.resolution_size(res, dev["native"]))
+        specs += res_files
     entry = STATE.load()["games"].get(key)
-    root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
-    ctx = steam.app_paths(root, appid) if root else None
-    file_plan = files.plan_files(specs, ctx, (entry or {}).get("files", {}))
+    file_plan = files.plan_files(specs, _ctx(appid), (entry or {}).get("files", {}))
     return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan)
 
 
 class Plugin:
     async def get_bootstrap(self):
         detected = devices.detect(DEVICES, devices.read_dmi())
+        s = SETTINGS.load()
+        native, external = _display(s)
+        # Games whose written resolution belongs to another screen (docked <-> handheld).
+        stale = [int(key) for key, entry in STATE.load()["games"].items()
+                 if games.resolution_stale(entry.get("files", {}), _resolution(int(key), s, native)[1])]
         return {
-            "settings": SETTINGS.load(),
+            "settings": s,
+            "display": {"native": native, "resolution": devices.clamp_resolution(None, native), "external": external},
+            "stale": stale,
             "detected": detected,
             "devices": [{"id": d["device"], "name": d["name"], "native": devices.native_class(d)}
                         for d in DEVICES.values()],
@@ -70,11 +93,11 @@ class Plugin:
         SETTINGS.save(s)
         return s
 
-    async def save_settings(self, device, render_resolution):
-        if device not in DEVICES or render_resolution not in RESOLUTIONS:
-            raise ValueError("invalid settings")
+    async def save_settings(self, device):
+        if device not in DEVICES:
+            raise ValueError("invalid device")
         s = SETTINGS.load()
-        s.update(device=device, render_resolution=render_resolution)
+        s["device"] = device
         SETTINGS.save(s)
         return s
 
@@ -86,6 +109,24 @@ class Plugin:
         s["games"].setdefault(key, {"profile": "default", "resolution": None})["resolution"] = resolution
         SETTINGS.save(s)
         return s
+
+    async def apply_resolution(self, appid):
+        """Write only this game's resolution, keeping whatever profile is applied."""
+        key = _check_appid(appid)
+        res, res_files = _resolution(appid, SETTINGS.load())
+        if not res_files:
+            return {"applied": False, "warnings": ["Loadout can't set this game's resolution."]}
+        state = STATE.load()
+        entry = state["games"].get(key, {})
+        plan = files.plan_keys(res_files, _ctx(appid), entry.get("files", {}))
+        if plan.error:
+            return {"applied": False, "warnings": [plan.error]}
+        files.apply_writes(plan.writes)  # raises (after rolling back) on failure
+        # The originals stay recorded, so Default still restores the resolution with everything else.
+        state["games"][key] = {**entry, "files": plan.state}
+        STATE.save(state)
+        decky.logger.info(f"applied resolution {res} to {appid}")
+        return {"applied": True, "warnings": list(plan.warnings), "resolution": res}
 
     async def plan_profile(self, appid, profile, current):
         return _plan(appid, profile, current).to_dict()
