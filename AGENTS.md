@@ -10,7 +10,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `validate.py` device/game doc schema + env allow/deny rules
   - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile)
   - `paths.py` token expansion + `safe_path` (resolve symlinks, must stay in prefix/install dir)
-  - `xmlcfg.py` flat XML read/set that preserves every other byte
+  - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
   - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback
   - `launch.py` marker-delimited launch-option block (build / strip / restore)
   - `planner.py` pure `build_plan` (dry-run, never writes)
@@ -35,6 +35,10 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   Backups are per key, never whole files.
 - Paths from data go through `safe_path` (prefix/install dir only); files are opened with O_NOFOLLOW.
 - No root (`plugin.json` flags are empty). No compiled Python deps.
+- Decky runs plugins on its own PyInstaller-frozen Python, which only ships the stdlib modules
+  decky_loader uses. The backend may only import `__future__ codecs json os pathlib re stat sys
+  typing` (enforced by `tests/test_runtime.py`). No xml.etree, shlex, dataclasses, tempfile, copy:
+  `xml.etree` already crashed the plugin on a real device. Adding a module means proving it ships.
 - Never invent device or game values; every data entry needs a real source. Config keys and
   their accepted values (`options`) are copied from a real config file / the in-game menu.
 

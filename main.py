@@ -1,7 +1,6 @@
 """Thin Decky adapter: wires real paths into the `loadout` core package."""
 import os
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "py_modules"))
@@ -75,7 +74,7 @@ class Plugin:
         return s
 
     async def plan_profile(self, appid, profile, current):
-        return asdict(_plan(appid, profile, current))
+        return _plan(appid, profile, current).to_dict()
 
     async def apply_profile(self, appid, profile, current):
         """Records state and returns the launch options the frontend must write."""

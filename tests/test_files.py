@@ -100,6 +100,30 @@ def test_xml_errors(raw, key):
         xmlcfg.read_values(raw, [key])
 
 
+@pytest.mark.parametrize("text", [
+    "<config><A>1</A></config>",
+    '<?xml version="1.0" encoding="utf-8"?>\r\n<config>\r\n<!-- <x> -->\r\n<A>1</A><B/></config>\r\n',
+    '<config a="1"><A b="x">1</A><![CDATA[ <not a tag> ]]></config>',
+])
+def test_well_formed_accepts(text):
+    xmlcfg.check_well_formed(text)
+
+
+@pytest.mark.parametrize("text", [
+    "", "   ", "<config>", "<config><A>1</B></config>", "<config></config><other/>",
+    "<config><A>1</A></config>trailing", "junk<config/>", "<config><A>1<</A></config>",
+    "<config><!-- unterminated </config>", "</config>", "<config><A>1</A></config></config>",
+])
+def test_well_formed_rejects(text):
+    with pytest.raises(ValueError):
+        xmlcfg.check_well_formed(text)
+
+
+def test_xml_rejects_bad_encoding():
+    with pytest.raises(ValueError):
+        xmlcfg.read_values(b"<config><A>\xff</A></config>", ["A"])
+
+
 def test_xml_rejects_unsafe_values():
     with pytest.raises(ValueError):
         xmlcfg.set_values(CONFIG, {"MotionBlur": "</MotionBlur><X>"})

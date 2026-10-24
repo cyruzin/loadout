@@ -71,9 +71,15 @@ function Content() {
   const [games, setGames] = useState<api.Game[]>([]);
   const [appid, setAppid] = useState<number>();
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string>();
 
   useEffect(() => {
-    api.getBootstrap().then((b) => { setBoot(b); setSettings(b.settings); }, errorToast);
+    // A backend that failed to start never answers, so don't wait forever.
+    const timer = setTimeout(() => setLoadError("The Loadout backend did not respond."), 10000);
+    api.getBootstrap().then(
+      (b) => { clearTimeout(timer); setBoot(b); setSettings(b.settings); },
+      (e) => { clearTimeout(timer); setLoadError(String(e)); },
+    );
     api.listGames().then((g) => {
       setGames(g);
       const running = window.SteamUIStore?.MainRunningAppID;
@@ -81,6 +87,13 @@ function Content() {
     }, errorToast);
   }, []);
 
+  if (loadError && !boot) {
+    return (
+      <PanelSection>
+        <PanelSectionRow>{loadError} Check the logs in ~/homebrew/logs/Loadout/.</PanelSectionRow>
+      </PanelSection>
+    );
+  }
   if (!boot || !settings) return <PanelSection><PanelSectionRow>Loading…</PanelSectionRow></PanelSection>;
   if (!settings.device) return <Onboarding boot={boot} onDone={setSettings} />;
 

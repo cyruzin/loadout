@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 from . import xmlcfg
 from .paths import safe_path
@@ -13,21 +12,19 @@ from .store import atomic_write
 MAX_SIZE = 1024 * 1024
 
 
-@dataclass(frozen=True)
-class FileChange:
+class FileChange(NamedTuple):
     path: str
     key: str
     old: str
     new: str
 
 
-@dataclass(frozen=True)
-class FilePlan:
+class FilePlan(NamedTuple):
     changes: tuple[FileChange, ...] = ()
     warnings: tuple[str, ...] = ()
     error: Optional[str] = None
     writes: tuple[tuple[str, dict[str, str]], ...] = ()  # (path, {key: value}) to write
-    state: dict[str, dict[str, dict[str, str]]] = field(default_factory=dict)  # path -> key -> {old, new}
+    state: Optional[dict[str, dict[str, dict[str, str]]]] = None  # path -> key -> {old, new}
 
 
 def read_nofollow(p: Path) -> bytes:

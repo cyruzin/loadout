@@ -7,19 +7,28 @@ The markers are plain env assignments, so the line stays valid shell.
 from __future__ import annotations
 
 import re
-import shlex
 from typing import Optional
 
 BEGIN = "LOADOUT_BEGIN=1"
 END = "LOADOUT_END=1"
 _BLOCK = re.compile(r"LOADOUT_BEGIN=1 (?:.*? )?LOADOUT_END=1 ?")
+_UNSAFE = re.compile(r"[^\w@%+=:,./-]", re.ASCII)
+
+
+def quote(s: str) -> str:
+    """Same as shlex.quote (shlex isn't in Decky's frozen Python)."""
+    if not s:
+        return "''"
+    if _UNSAFE.search(s) is None:
+        return s
+    return "'" + s.replace("'", "'\"'\"'") + "'"
 
 
 def build(base: str, env: dict[str, str]) -> str:
     """Prepend the managed block to the user's launch options (`base`, block-free)."""
     if not env:
         return base
-    assigns = " ".join(f"{k}={shlex.quote(v)}" for k, v in env.items())
+    assigns = " ".join(f"{k}={quote(v)}" for k, v in env.items())
     rest = base.strip()
     if "%command%" not in rest:
         # Plain args like "-novid" are appended by Steam; with %command% they must follow it.

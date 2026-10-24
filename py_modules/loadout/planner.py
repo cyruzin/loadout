@@ -1,8 +1,7 @@
 """Pure planning: (current launch options, stored state, level) -> Plan. Never writes."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Literal, Optional
+from typing import Any, Literal, NamedTuple, Optional
 
 from . import launch
 from .files import FilePlan
@@ -11,8 +10,8 @@ from .validate import PROFILES
 ALL_PROFILES = ("default",) + PROFILES
 
 
-@dataclass(frozen=True)
-class Change:
+# NamedTuple, not dataclasses: Decky's frozen Python only ships the stdlib modules it uses itself.
+class Change(NamedTuple):
     kind: Literal["launch_option", "env", "file_key"]
     target: str
     key: str
@@ -20,8 +19,7 @@ class Change:
     new: Optional[str]
 
 
-@dataclass(frozen=True)
-class Plan:
+class Plan(NamedTuple):
     appid: int
     profile: str
     original: str  # user's launch options without our block: what Default returns to
@@ -29,8 +27,11 @@ class Plan:
     changes: tuple[Change, ...]
     warnings: tuple[str, ...]
     blocked: bool  # markers corrupted or a file problem: nothing may be applied or restored
-    file_writes: tuple[tuple[str, dict[str, str]], ...] = ()
-    file_state: dict[str, dict[str, dict[str, str]]] = field(default_factory=dict)
+    file_writes: tuple[tuple[str, dict[str, str]], ...]
+    file_state: dict[str, dict[str, dict[str, str]]]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**self._asdict(), "changes": [c._asdict() for c in self.changes]}
 
 
 def profile_env(level: dict[str, Any], game_env: Optional[dict[str, str]] = None) -> dict[str, str]:
@@ -66,4 +67,4 @@ def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str,
     warnings += list(fp.warnings) + ([fp.error] if fp.error else [])
     changes += [Change("file_key", c.path, c.key, c.old, c.new) for c in fp.changes]
     return Plan(appid, profile, base, new, tuple(changes), tuple(warnings),
-                warning is not None or fp.error is not None, fp.writes, fp.state)
+                warning is not None or fp.error is not None, fp.writes, dict(fp.state or {}))
