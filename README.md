@@ -131,7 +131,23 @@ publishes it on the GitHub Releases page. The tag must match the `package.json` 
 To build the zip locally: `scripts/package.sh` (writes `out/Loadout.zip`).
 
 Installing a release on a device: Decky → Settings → enable **Developer mode** → Developer →
-**Install Plugin from URL** (paste the `Loadout.zip` asset link) or **Install Plugin from ZIP File**.
+**Install Plugin from ZIP File**. Download the zip first (Desktop Mode / Konsole or SSH):
+
+```bash
+curl -L -o ~/Downloads/Loadout.zip https://github.com/cyruzin/loadout/releases/latest/download/Loadout.zip
+```
+
+**Install Plugin from URL** can hang: for URL installs Decky also posts an install count to its
+store server, with no timeout
+([decky-loader#984](https://github.com/SteamDeckHomebrew/decky-loader/issues/984)). ZIP installs
+skip that step.
+
+After updating, restart the loader so the Quick Access panel doesn't keep the old UI
+([decky-loader#976](https://github.com/SteamDeckHomebrew/decky-loader/issues/976)):
+
+```bash
+sudo systemctl restart plugin_loader
+```
 
 ## Project layout
 
