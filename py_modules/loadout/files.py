@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
-from . import xmlcfg
+from . import inicfg, xmlcfg
 from .paths import safe_path
 from .store import atomic_write
 
@@ -25,6 +25,12 @@ class FilePlan(NamedTuple):
     error: Optional[str] = None
     writes: tuple[tuple[str, dict[str, str]], ...] = ()  # (path, {key: value}) to write
     state: Optional[dict[str, dict[str, dict[str, str]]]] = None  # path -> key -> {old, new}
+
+
+def handler(key: str) -> Any:
+    """INI keys are written "[Section]Key"; XML element names can't start with "[". Validation
+    ties each file's keys to its declared format, so a file's keys all pick the same handler."""
+    return inicfg if key.startswith("[") else xmlcfg
 
 
 def read_nofollow(p: Path) -> bytes:
@@ -77,7 +83,7 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
         new_state: dict[str, dict[str, str]] = {}
         for key in sorted(set(want) | set(prev)):
             try:
-                current = xmlcfg.read_values(raw, [key])[key]
+                current = handler(key).read_values(raw, [key])[key]
             except ValueError as e:
                 if key in want:
                     return FilePlan(error=f"{path.name}: {e}")
@@ -111,7 +117,7 @@ def apply_writes(writes: tuple[tuple[str, dict[str, str]], ...]) -> None:
             if path.parent.resolve() != path.parent:
                 raise PermissionError(f"{path.parent} changed since planning")
             raw = read_nofollow(path)
-            atomic_write(path, xmlcfg.set_values(raw, values))
+            atomic_write(path, handler(next(iter(values))).set_values(raw, values))
             done.append((path, raw))
     except BaseException:
         for path, raw in reversed(done):

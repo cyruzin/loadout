@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from . import xmlcfg
+from . import inicfg, xmlcfg
+from .textfile import VALUE
 from .paths import ROOT_TOKENS, expand
 
 PROFILES = ("quality", "balanced", "performance", "uncapped")
@@ -20,6 +21,8 @@ ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DEVICE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 NATIVE = re.compile(r"^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$")
 DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+# Config file formats and their key syntax: XML element names, INI "[Section]Key".
+KEY_FORMATS = {"xml": xmlcfg.KEY, "ini": inicfg.KEY}
 
 
 class ValidationError(ValueError):
@@ -115,10 +118,10 @@ def validate_options(x: Any) -> dict[str, dict[str, list[str]]]:
         if not isinstance(keys, dict) or len(keys) > 64:
             raise ValidationError(f"options[{path}]: expected object with at most 64 keys")
         for k, vals in keys.items():
-            if not isinstance(k, str) or not xmlcfg.KEY.match(k):
+            if not isinstance(k, str) or not any(fmt.match(k) for fmt in KEY_FORMATS.values()):
                 raise ValidationError(f"options: invalid key {k!r}")
             if (not isinstance(vals, list) or not 0 < len(vals) <= 16
-                    or not all(isinstance(s, str) and xmlcfg.VALUE.match(s) for s in vals)):
+                    or not all(isinstance(s, str) and VALUE.match(s) for s in vals)):
                 raise ValidationError(f"options.{k}: expected list of 1..16 values")
         out[path] = {k: list(vals) for k, vals in keys.items()}
     return out
@@ -133,17 +136,18 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
         w = f"{where}[{i}]"
         _obj(f, w, {"path", "format", "set"}, {"path", "format", "set"})
         path = _path_template(f["path"], f"{w}.path")
-        if f["format"] != "xml":
-            raise ValidationError(f"{w}.format: only 'xml' is supported")
+        key_re = KEY_FORMATS.get(f["format"])
+        if key_re is None:
+            raise ValidationError(f"{w}.format: expected one of {sorted(KEY_FORMATS)}")
         values = f["set"]
         if not isinstance(values, dict) or not 0 < len(values) <= 64:
             raise ValidationError(f"{w}.set: expected 1..64 keys")
         for k, val in values.items():
-            if not isinstance(k, str) or not xmlcfg.KEY.match(k):
-                raise ValidationError(f"{w}.set: invalid key {k!r}")
-            if not isinstance(val, str) or not xmlcfg.VALUE.match(val):
+            if not isinstance(k, str) or not key_re.match(k):
+                raise ValidationError(f"{w}.set: invalid {f['format']} key {k!r}")
+            if not isinstance(val, str) or not VALUE.match(val):
                 raise ValidationError(f"{w}.set.{k}: invalid value")
-        out.append({"path": path, "format": "xml", "set": dict(values)})
+        out.append({"path": path, "format": f["format"], "set": dict(values)})
     return out
 
 

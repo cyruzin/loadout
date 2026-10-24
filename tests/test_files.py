@@ -312,3 +312,114 @@ def test_elden_ring_real_file_quality_round_trip(tmp_path):
         "<MotionBlur>HIGH<", "<MotionBlur>DISABLE<").encode("utf-16-le")  # still no BOM, still CRLF
     apply([], ctx, plan.state)
     assert cfg.read_bytes() == ELDEN_RING
+
+# --- INI handler -----------------------------------------------------------
+
+from loadout import inicfg  # noqa: E402
+
+INI = (b"; comment\r\n[ScalabilityGroups]\r\nsg.ShadowQuality=1\r\nsg.TextureQuality = 2  \r\n\r\n"
+       b"[/Script/Game.Settings]\r\nFSR3Mode=Quality\r\nSteps=1.0\r\nSteps=2.0\r\nShadowQuality=9\r\n")
+
+
+def test_ini_set_preserves_every_other_byte():
+    out = inicfg.set_values(INI, {"[ScalabilityGroups]sg.ShadowQuality": "0",
+                                  "[ScalabilityGroups]sg.TextureQuality": "3"})
+    assert out == INI.replace(b"sg.ShadowQuality=1", b"sg.ShadowQuality=0").replace(
+        b"sg.TextureQuality = 2  ", b"sg.TextureQuality = 3  ")
+
+
+def test_ini_keys_are_scoped_to_their_section():
+    assert inicfg.read_values(INI, ["[ScalabilityGroups]sg.ShadowQuality", "[/Script/Game.Settings]ShadowQuality"]) \
+        == {"[ScalabilityGroups]sg.ShadowQuality": "1", "[/Script/Game.Settings]ShadowQuality": "9"}
+
+
+@pytest.mark.parametrize("key", [
+    "[/Script/Game.Settings]Steps",  # duplicated (UE repeats benchmark keys)
+    "[ScalabilityGroups]sg.Missing", "[Nope]sg.ShadowQuality",
+    "sg.ShadowQuality", "[ScalabilityGroups]a=b", "[A]]x",
+])
+def test_ini_key_errors(key):
+    with pytest.raises(ValueError):
+        inicfg.read_values(INI, [key])
+
+
+@pytest.mark.parametrize("raw", [b"[S]\r\nnot a key value line\r\n", b"[S]\r\n=novalue\r\n", b"\xff\xfe\xff"])
+def test_ini_malformed(raw):
+    with pytest.raises(ValueError):
+        inicfg.read_values(raw, ["[S]a"])
+
+
+@pytest.mark.parametrize("value", ["1\r\nInjected=1", "x;y", "[S]", "a=b"])
+def test_ini_rejects_unsafe_values(value):
+    with pytest.raises(ValueError):
+        inicfg.set_values(INI, {"[ScalabilityGroups]sg.ShadowQuality": value})
+
+
+@pytest.mark.parametrize("codec", ["utf-16-le", "utf-16-be"])
+def test_ini_bomless_utf16_round_trip(codec):
+    raw = INI.decode().encode(codec)
+    out = inicfg.set_values(raw, {"[ScalabilityGroups]sg.ShadowQuality": "3"})
+    assert out == INI.decode().replace("sg.ShadowQuality=1", "sg.ShadowQuality=3").encode(codec)
+
+
+# Lies of P's GameUserSettings.ini as found on a device (ASCII, CRLF, lives in the install dir).
+LIES_OF_P = ("""[ScalabilityGroups]
+sg.ResolutionQuality=100.000000
+sg.ViewDistanceQuality=1
+sg.AntiAliasingQuality=1
+sg.ShadowQuality=1
+sg.PostProcessQuality=1
+sg.TextureQuality=1
+sg.EffectsQuality=1
+sg.FoliageQuality=1
+sg.ShadingQuality=1
+sg.AnisotropyQuality=3
+sg.AtmosphereQuality=1
+sg.AmbientOcclusionQuality=1
+sg.ReflectionQuality=1
+
+[/Script/ProjectP.LGameUserSettings]
+IsInitedGraphic=True
+LastResolution=(X=0,Y=0)
+bPrevVSync=False
+CACAOEnabled=True
+DLSSMode=Off
+FSR2Mode=Off
+FSR3Mode=Quality
+FSR3Sharpness=0.700000
+FSR3FrameInterpolation=False
+bUseVSync=False
+ResolutionSizeX=1920
+ResolutionSizeY=1080
+FrameRateLimit=30.000000
+LastCPUBenchmarkSteps=158.467346
+LastCPUBenchmarkSteps=135.435577
+
+[/Script/Engine.GameUserSettings]
+bUseDesiredScreenHeight=False
+
+[ShaderPipelineCache.CacheFile]
+LastOpened=LiesofP
+""").replace("\n", "\r\n").encode("ascii")
+
+
+def test_lies_of_p_real_file_profiles_round_trip(tmp_path):
+    from loadout import games
+    profiles = games.load_games()[1627720]["profiles"]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "game/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(LIES_OF_P)
+
+    perf = apply(profiles["performance"]["files"], ctx, {})
+    text = cfg.read_bytes().decode("ascii")
+    assert "sg.ShadowQuality=0\r\n" in text and "sg.TextureQuality=1\r\n" in text  # texture stays Medium
+    assert "sg.AnisotropyQuality=3\r\n" in text and "FrameRateLimit=0.000000\r\n" in text
+    assert "sg.ResolutionQuality=100.000000\r\n" in text and "ResolutionSizeX=1920\r\n" in text  # untouched
+    assert text.count("LastCPUBenchmarkSteps=") == 2  # duplicated keys left alone
+
+    balanced = apply(profiles["balanced"]["files"], ctx, perf.state)  # switch: no stacking
+    text = cfg.read_bytes().decode("ascii")
+    assert "sg.ViewDistanceQuality=1\r\n" in text and "sg.ShadowQuality=0\r\n" in text
+    apply([], ctx, balanced.state)  # Default (original)
+    assert cfg.read_bytes() == LIES_OF_P

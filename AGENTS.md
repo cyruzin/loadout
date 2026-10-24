@@ -8,10 +8,14 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - `main.py` - thin Decky adapter. The only file that imports `decky`.
 - `py_modules/loadout/` - pure core (never imports `decky`):
   - `validate.py` device/game doc schema + env allow/deny rules
-  - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile)
+  - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile);
+    `annotate` marks installed games as supported / verified on this device / profile applied,
+    for the UI's Show filter (`GAME_FILTERS`)
   - `paths.py` token expansion + `safe_path` (resolve symlinks, must stay in prefix/install dir)
-  - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check;
-    UTF-8 or UTF-16, with or without BOM; ELDEN RING writes UTF-16 LE without BOM)
+  - `textfile.py` decode/encode config files (UTF-8 or UTF-16, with or without BOM; ELDEN RING
+    writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
+  - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
+  - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused
   - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback
   - `launch.py` marker-delimited launch-option block (build / strip / restore)
   - `planner.py` pure `build_plan` (dry-run, never writes)
@@ -49,11 +53,12 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   not text pasted from a terminal: check with `xxd` on the device first.
 
 ## Scope
-IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML config keys,
+IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML/INI config keys,
 launch options, settings file,
 device detection, preferred render resolution.
-LATER (do not build unless asked): community data download + SHA-256, ini/json config handlers,
-Wine registry, TDP, global/batch profile, export/import.
+LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
+Wine registry, global/batch profile, export/import.
+OUT (maintainer decision): TDP and other power settings; the user handles those in Steam's QAM.
 
 ## Known unknowns (do NOT guess; flag them)
 - Steam frontend APIs (`SteamClient.Apps.*`) are not a public contract.
@@ -72,7 +77,8 @@ Run this checklist at the end of EVERY implementation, adjustment or fix, before
    env or files); existing tests that the change affects are updated, not deleted to make them pass.
 2. Run everything and fix what fails:
    `.venv/bin/python -m pytest -q`, `pnpm run typecheck`, `pnpm run build`.
-3. Docs: check whether README.md (user-facing: features, tables, how to run/add data) or AGENTS.md
-   (layout, rules, scope, known unknowns) are now stale, and update them.
+3. Docs: check whether README.md (user-facing: features, tables, how to run), CONTRIBUTING.md
+   (data format and the verify/add steps) or AGENTS.md (layout, rules, scope, known unknowns)
+   are now stale, and update them.
 4. No `decky` import under `py_modules/loadout/`.
 5. Report what was run and its result; say explicitly if something was skipped or is unverified.

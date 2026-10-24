@@ -8,11 +8,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "py
 import decky  # noqa: E402
 from loadout import devices, files, games, planner, steam  # noqa: E402
 from loadout.store import JsonStore  # noqa: E402
+from loadout.games import GAME_FILTERS  # noqa: E402
 from loadout.validate import RESOLUTIONS  # noqa: E402
 
 # Intent only (forward-compatible, later the export format). Backups live in STATE.
 SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
     "schema_version": 1, "device": None, "render_resolution": None, "global_profile": None, "games": {},
+    "game_filter": "verified",
 })
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
 DEVICES = devices.load_devices()
@@ -55,7 +57,15 @@ class Plugin:
     async def list_games(self):
         root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
         installed = steam.list_games(root) if root else []
-        return games.annotate(installed, set(GAMES), set(STATE.load()["games"]))
+        return games.annotate(installed, GAMES, STATE.load()["games"], SETTINGS.load()["device"])
+
+    async def set_game_filter(self, game_filter):
+        if game_filter not in GAME_FILTERS:
+            raise ValueError("invalid game filter")
+        s = SETTINGS.load()
+        s["game_filter"] = game_filter
+        SETTINGS.save(s)
+        return s
 
     async def save_settings(self, device, render_resolution):
         if device not in DEVICES or render_resolution not in RESOLUTIONS:

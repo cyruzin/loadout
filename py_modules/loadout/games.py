@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from .validate import ValidationError, validate_game_doc
 
@@ -20,7 +20,18 @@ def load_games(directory: Path = DATA_DIR) -> dict[int, dict[str, Any]]:
     return out
 
 
-def annotate(installed: list[dict[str, Any]], supported: set[int], active: set[str]) -> list[dict[str, Any]]:
-    """Mark which installed games have Loadout data and which have a profile applied right now
-    (those must stay visible, or Default couldn't be restored from the UI)."""
-    return [{**g, "supported": g["appid"] in supported, "active": str(g["appid"]) in active} for g in installed]
+GAME_FILTERS = ("verified", "loadout", "all")  # cumulative: each one shows more games
+
+
+def annotate(installed: list[dict[str, Any]], docs: dict[int, dict[str, Any]],
+             applied: dict[str, dict[str, Any]], device: Optional[str]) -> list[dict[str, Any]]:
+    """Per installed game: has a Loadout entry (`supported`), that entry was verified on this
+    device (`verified`), and which profile is applied right now (`profile`, None if none)."""
+    out = []
+    for g in installed:
+        doc = docs.get(g["appid"])
+        verified = doc is not None and any(v["device"] == device for v in doc["verified"])
+        entry = applied.get(str(g["appid"]))
+        out.append({**g, "supported": doc is not None, "verified": verified,
+                    "profile": entry.get("profile") if entry else None})
+    return out

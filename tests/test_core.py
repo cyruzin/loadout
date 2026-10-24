@@ -187,6 +187,8 @@ def test_game_doc_valid():
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"A": "<b>"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"A": "x&y"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"a b": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.ini", fmt="ini", values={"sg.Shadow": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"[S]Key": "1"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml")] * 9}}},
     {"profiles": {"quality": {"launch": {"env": {"LD_PRELOAD": "/x.so"}}}}},
@@ -214,22 +216,56 @@ def test_game_options_rejected(options):
         validate_game_doc(_game(options=options))
 
 
+def test_game_doc_ini_files():
+    ok = {"quality": {"files": [_xml("{install_dir}/G.ini", fmt="ini", values={"[/Script/X.Y]sg.A": "1"})]}}
+    assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["format"] == "ini"
+
+
 def test_game_file_name_must_match_appid(tmp_path):
     (tmp_path / "123.json").write_text(json.dumps(_game()))
     with pytest.raises(ValidationError):
         games.load_games(tmp_path)
 
 
-def test_annotate_marks_supported_and_active():
-    installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"}, {"appid": 2, "name": "X"}]
-    out = games.annotate(installed, {1245620}, {"1"})
-    assert [(g["appid"], g["supported"], g["active"]) for g in out] == [
-        (1245620, True, False), (1, False, True), (2, False, False)]
+def test_annotate_marks_supported_verified_and_profile():
+    installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"},
+                 {"appid": 2, "name": "Lies of P"}]
+    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}]}, 2: {"verified": []}}
+    applied = {"1": {"profile": "performance"}}
+    rows = lambda device: [(g["supported"], g["verified"], g["profile"])
+                           for g in games.annotate(installed, docs, applied, device)]
+    assert rows("rog-xbox-ally") == [(True, True, None), (False, False, "performance"), (True, False, None)]
+    # Verified is per device: the same entry is untested on a Legion Go.
+    assert rows("legion-go")[0] == (True, False, None)
+    assert rows(None)[0] == (True, False, None)
+
+
+def test_elden_ring_performance_and_uncapped_use_lowest_settings():
+    doc = json.loads((games.DATA_DIR / "1245620.json").read_text())
+    (path, options), = doc["options"].items()
+    for profile in ("performance", "uncapped"):
+        values = doc["profiles"][profile]["files"][0]["set"]
+        for key, accepted in options.items():
+            assert values[key] == accepted[0], (profile, key)  # option lists go lowest -> highest
+
+
+def test_lies_of_p_profiles_match_the_tested_presets():
+    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[1627720]["profiles"].items()}
+    sg = lambda p, name: profiles[p][f"[ScalabilityGroups]sg.{name}Quality"]
+    for p in profiles:
+        # Every profile: anisotropic at max, texture at medium, game's own FPS limit off.
+        assert sg(p, "Anisotropy") == "3" and sg(p, "Texture") == "1"
+        assert profiles[p]["[/Script/ProjectP.LGameUserSettings]FrameRateLimit"] == "0.000000"
+    assert profiles["performance"] == profiles["uncapped"]
+    assert sg("performance", "Shadow") == "0" and sg("balanced", "ViewDistance") == "1"
+    assert sg("balanced", "Shadow") == "0" and sg("quality", "Shadow") == "1"
 
 
 def test_bundled_games_load():
     er = games.load_games()[1245620]
-    assert {v["device"] for v in er["verified"]} == {"rog-xbox-ally", "steam-deck-lcd", "steam-deck-oled"}
+    # Every bundled device except the generic fallback (which isn't a device anyone can verify on).
+    for doc in games.load_games().values():
+        assert {v["device"] for v in doc["verified"]} == set(devices.load_devices()) - {devices.GENERIC}
     for profile in ("quality", "balanced", "performance", "uncapped"):
         assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
 

@@ -10,9 +10,15 @@ should work too.
 ## What the MVP does
 
 - Lists installed Steam games by reading `libraryfolders.vdf` and `appmanifest_*.acf` (all libraries,
-  including SD cards). By default only games with Loadout settings (`data/games/`) are shown, plus
-  any game that currently has a profile applied; **Show all games** lists the rest as "(generic)",
-  which only get the device FPS cap. Proton/runtime tools are always hidden.
+  including SD cards). Proton/runtime tools are always hidden. A **Show** filter picks which games
+  are listed (saved in settings):
+  - **Verified on this device** (default): games with a Loadout entry whose `verified` list
+    includes your device.
+  - **All Loadout games**: also entries not verified on your device, marked "(untested)".
+  - **All games**: also every other installed game, marked "(generic)" (FPS cap only).
+
+  Games with a profile applied show it next to the name (e.g. "Crysis 3 (generic) · Performance").
+  If the filter hides such a game, a note lists it so it can still be set back to Default.
 - Applies a profile by writing a managed block to the game's launch options, e.g.
 
   ```
@@ -21,16 +27,22 @@ should work too.
 
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
-- Edits in-game graphics settings for games that have a data entry (XML configs inside the Proton
-  prefix, e.g. ELDEN RING's `GraphicsConfig.xml`). Only the listed keys change, each original value
-  is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs.
-  Default puts every key back unless the game changed it since.
+- Edits in-game graphics settings for games that have a data entry: XML configs (e.g. ELDEN
+  RING's `GraphicsConfig.xml` in the Proton prefix) and INI configs (e.g. Lies of P's Unreal
+  Engine `GameUserSettings.ini` in the install folder). Only the listed keys change, each original value
+  is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs
+  (the confirmation asks you to close it). Default puts every key back unless the game changed it
+  since.
+- Never acts on its own: nothing runs when a game starts or exits. Settings you change in the game's
+  menu stay as you set them until you apply a profile again (the diff shows what that would change).
 - Shows a dry-run diff and asks for confirmation before changing anything.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
-- Lets you pick a preferred render resolution, globally and per game.
-- Changes apply the next time the game launches.
+- Lets you declare the resolution you render at, globally and per game. Loadout doesn't change
+  the game's resolution; it only uses this to pick device values. All bundled device tables use the
+  same caps at every resolution today, so for now it has no effect.
+- Launch-option changes (FPS cap, env vars) apply the next time the game launches.
 
 **FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under
 Proton. Native Linux, OpenGL and native Vulkan games are not capped (yet).
@@ -69,11 +81,26 @@ What a profile does depends on whether the game has a Loadout entry in
 
 In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
 you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
-shows only games with an entry by default; turn on **Show all games** to use the generic cap on
-the rest. See [Adding a game](#adding-a-game) to contribute an entry.
+shows only verified games by default; pick **All games** in the Show filter to use the generic cap
+on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry.
 
-Not in the MVP yet: community data repo download, ini/json config files, TDP, global/batch profiles,
-export/import.
+### Bundled games
+
+| Game | Verified on | Quality | Balanced | Performance / Uncapped |
+|---|---|---|---|---|
+| ELDEN RING (1245620) | all bundled devices (tested on ROG Xbox Ally) | tuned graphics (high textures/AA, low shadows, motion blur off) | device cap only | every graphics option at its lowest |
+| Lies of P (1627720) | all bundled devices (tested on ROG Xbox Ally) | everything Medium | Medium; shading, shadows, reflections, fog, AO Low | everything Low |
+
+The FPS cap always comes from the device table above. All ELDEN RING profiles also set
+`MESA_VK_WSI_PRESENT_MODE=immediate`. All Lies of P profiles keep textures at Medium and
+anisotropic filtering at Maximum (cheap, big visual win), use FSR 3 Quality with 0.7 sharpness and
+CACAO, and turn off the game's own frame limit and VSync so Loadout's cap is the only limiter.
+
+### Not included
+
+- Not yet: community data repo download, JSON config files, global/batch profiles,
+  export/import.
+- Out of scope: TDP and other power settings. Use the Steam Quick Access Menu for those.
 
 ## Requirements
 
@@ -117,12 +144,12 @@ The backend runs as your normal user (no root flag).
 
 ## Releasing
 
-1. Bump `version` in `package.json` (e.g. `0.2.0`) and commit.
+1. Bump `version` in `package.json` (e.g. `X.Y.Z`) and commit.
 2. Tag and push:
 
    ```bash
-   git tag v0.2.0
-   git push origin main v0.2.0
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
    ```
 
 The [Release workflow](.github/workflows/release.yml) runs the tests, builds `Loadout.zip` and
@@ -159,60 +186,20 @@ src/                       React/TypeScript frontend (@decky/ui, @decky/api)
 tests/                     pytest suite
 scripts/package.sh         builds out/Loadout.zip
 .github/workflows/         tag-triggered release
-AGENTS.md                  rules for contributors and coding agents
+CONTRIBUTING.md            how to verify/add games and devices
+AGENTS.md                  rules for coding agents
 ```
 
-## Adding a game
+## Contributing
 
-Create `py_modules/loadout/data/games/<appid>.json` (see `1245620.json`, ELDEN RING). Each profile can:
+Game and device data come from people testing on real hardware. [CONTRIBUTING.md](CONTRIBUTING.md)
+has the step-by-step for:
 
-- add allowlisted env vars to the launch options (per-game values win over device values);
-- set keys in the game's XML config files. Paths must start with `{prefix}/` (the game's Proton
-  prefix) or `{install_dir}/`, and keys must already exist in the file: copy them from a real
-  config, never guess.
-
-`options` lists the values each key accepts (copy them from the in-game menu; e.g. ELDEN RING
-writes Off as `DISABLE` and Maximum as `MAX`). Profiles that set anything outside that list are
-rejected.
-
-Only define profiles that were actually tested: list each device in `verified` (Proton version,
-device id, date) and link where the settings came from in `source`.
-
-```json
-{
-  "schema_version": 1,
-  "appid": 1245620,
-  "name": "ELDEN RING",
-  "verified": [
-    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" },
-    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
-    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" }
-  ],
-  "options": {
-    "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml": {
-      "MotionBlur": ["DISABLE", "LOW", "MEDIUM", "HIGH"],
-      "ShadowQuality": ["LOW", "MEDIUM", "HIGH", "MAX"]
-    }
-  },
-  "profiles": {
-    "quality": {
-      "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
-      "files": [{
-        "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-        "format": "xml",
-        "set": { "MotionBlur": "DISABLE", "ShadowQuality": "LOW" }
-      }]
-    }
-  }
-}
-```
-
-## Adding a device
-
-Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). In `match`, put a
-distinctive part of what `cat /sys/class/dmi/id/product_name` prints on the device (matching is by
-substring, since some vendors add per-unit suffixes). Confirm it on real hardware, don't guess.
-Run the tests; invalid files fail validation.
+- **verifying an existing game on your device**, which moves it to the default
+  "Verified on this device" list for everyone with that device;
+- adding a new game (finding its config file, mapping menu options to file values, writing the
+  entry, testing every profile);
+- adding a new device (DMI string, panel, FPS caps).
 
 ## License
 

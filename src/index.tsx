@@ -6,7 +6,6 @@ import {
   PanelSectionRow,
   showModal,
   staticClasses,
-  ToggleField,
 } from "@decky/ui";
 import { definePlugin, toaster } from "@decky/api";
 import { useEffect, useState } from "react";
@@ -14,6 +13,20 @@ import { FaSlidersH } from "react-icons/fa";
 import * as api from "./api";
 
 const errorToast = (e: unknown) => toaster.toast({ title: "Loadout", body: String(e) });
+
+const profileLabel = (id: string | null) => api.PROFILES.find((p) => p.id === id)?.label ?? id;
+
+// Cumulative filters: each one also shows what the previous one does.
+const FILTERS: { id: api.GameFilter; label: string; keep: (g: api.Game) => boolean }[] = [
+  { id: "verified", label: "Verified on this device", keep: (g) => g.verified },
+  { id: "loadout", label: "All Loadout games", keep: (g) => g.supported },
+  { id: "all", label: "All games", keep: () => true },
+];
+
+function gameLabel(g: api.Game) {
+  const kind = !g.supported ? " (generic)" : g.verified ? "" : " (untested)";
+  return `${g.name}${kind}${g.profile ? ` · ${profileLabel(g.profile)}` : ""}`;
+}
 
 // The QAM panel gets remounted (e.g. when a dropdown menu opens), which wipes useState: picks
 // made in local state were lost. UI state lives at module level so it survives remounts, and
@@ -93,9 +106,10 @@ function Content() {
   const [appid, setAppid] = useKept<number | undefined>("appid", undefined);
   const [busy, setBusy] = useKept("busy", false);
   const [loadError, setLoadError] = useKept<string | undefined>("loadError", undefined);
-  const [showAll, setShowAll] = useKept("showAll", false);
-  // Only games Loadout knows how to tune, plus any with a profile applied (so Default stays reachable).
-  const visible = showAll ? games : games.filter((g) => g.supported || g.active);
+  const filter = FILTERS.find((f) => f.id === settings?.game_filter) ?? FILTERS[0];
+  const visible = games.filter(filter.keep);
+  // Games with a profile applied that the filter hides: listed below, so Default stays reachable.
+  const hiddenApplied = games.filter((g) => g.profile && !filter.keep(g));
   // Selection falls back to the first visible game when the current one is hidden.
   const selected = visible.some((g) => g.appid === appid) ? appid : visible[0]?.appid;
 
@@ -108,12 +122,12 @@ function Content() {
     );
     api.listGames().then((g) => {
       setGames(g);
-      // Keep the user's pick across remounts; default to the running game, else the first one.
+      // Keep the user's pick across remounts; else prefer the running game (if the filter shows it,
+      // otherwise `selected` falls back to the first visible game).
       const picked = kept.get("appid");
       if (g.some((x) => x.appid === picked)) return;
       const running = window.SteamUIStore?.MainRunningAppID;
-      const shown = g.filter((x) => x.supported || x.active);
-      setAppid(shown.some((x) => x.appid === running) ? running : shown[0]?.appid);
+      if (g.some((x) => x.appid === running)) setAppid(running);
     }, errorToast);
   }, []);
 
@@ -153,7 +167,7 @@ function Content() {
               }
               api.setLaunchOptions(selected, result.launch_options);
               setSettings((await api.getBootstrap()).settings);
-              setGames(await api.listGames());  // refresh "active", which keeps the game listed
+              setGames(await api.listGames());  // refresh the applied profile shown next to each game
               toaster.toast({ title: "Loadout", body: "Applies the next time the game launches" });
             } catch (e) {
               errorToast(e);
@@ -172,15 +186,26 @@ function Content() {
     <>
       <PanelSection title="Game">
         <PanelSectionRow>
-          <DropdownItem layout="below" label="Game" disabled={!visible.length}
-            strDefaultLabel={showAll ? "No games found" : "No games with Loadout settings"}
-            rgOptions={visible.map((g) => ({ data: g.appid, label: g.supported ? g.name : `${g.name} (generic)` }))}
-            selectedOption={selected} onChange={(o) => setAppid(o.data)} />
+          <DropdownItem layout="below" label="Show" rgOptions={FILTERS.map((f) => ({ data: f.id, label: f.label }))}
+            selectedOption={filter.id}
+            description="Untested: has Loadout settings, not verified on this device. Generic: FPS cap only."
+            onChange={(o) => api.setGameFilter(o.data).then(setSettings, errorToast)} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <ToggleField label="Show all games" checked={showAll} onChange={setShowAll}
-            description="Games without Loadout settings only get the device FPS cap." />
+          <DropdownItem layout="below" label="Game" disabled={!visible.length}
+            strDefaultLabel="No games for this filter"
+            rgOptions={visible.map((g) => ({ data: g.appid, label: gameLabel(g) }))}
+            selectedOption={selected} onChange={(o) => setAppid(o.data)} />
         </PanelSectionRow>
+        {hiddenApplied.length > 0 && (
+          <PanelSectionRow>
+            <div style={{ fontSize: 12, color: "#e8a33d" }}>
+              Profiles applied to hidden games:{" "}
+              {hiddenApplied.map((g) => `${g.name} (${profileLabel(g.profile)})`).join(", ")}.
+              Show "All games" to change them.
+            </div>
+          </PanelSectionRow>
+        )}
         <PanelSectionRow>
           <DropdownItem layout="below" label="Profile" disabled={selected === undefined || busy}
             rgOptions={api.PROFILES.map((p) => ({ data: p.id, label: p.label }))}
