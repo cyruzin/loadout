@@ -6,6 +6,7 @@ import {
   PanelSectionRow,
   showModal,
   staticClasses,
+  ToggleField,
 } from "@decky/ui";
 import { definePlugin, toaster } from "@decky/api";
 import { useEffect, useState } from "react";
@@ -13,6 +14,26 @@ import { FaSlidersH } from "react-icons/fa";
 import * as api from "./api";
 
 const errorToast = (e: unknown) => toaster.toast({ title: "Loadout", body: String(e) });
+
+// The QAM panel gets remounted (e.g. when a dropdown menu opens), which wipes useState: picks
+// made in local state were lost. UI state lives at module level so it survives remounts, and
+// every mounted copy re-renders on change (stale closures from a modal still update the UI).
+const kept = new Map<string, unknown>();
+const subscribers = new Set<() => void>();
+
+function useKept<T>(key: string, initial: T): [T, (value: T) => void] {
+  const [, rerender] = useState(0);
+  useEffect(() => {
+    const notify = () => rerender((n) => n + 1);
+    subscribers.add(notify);
+    return () => { subscribers.delete(notify); };
+  }, []);
+  const set = (value: T) => {
+    kept.set(key, value);
+    subscribers.forEach((notify) => notify());
+  };
+  return [(kept.has(key) ? kept.get(key) : initial) as T, set];
+}
 
 function describe(plan: api.Plan, running: boolean) {
   const env = plan.changes.filter((c) => c.kind === "env");
@@ -39,9 +60,9 @@ function describe(plan: api.Plan, running: boolean) {
 }
 
 function Onboarding({ boot, onDone }: { boot: api.Bootstrap; onDone: (s: api.Settings) => void }) {
-  const [device, setDevice] = useState(boot.detected ?? "generic");
+  const [device, setDevice] = useKept("setup.device", boot.detected ?? "generic");
   const native = boot.devices.find((d) => d.id === device)?.native ?? "1080p";
-  const [res, setRes] = useState<string | null>(null);
+  const [res, setRes] = useKept<string | null>("setup.resolution", null);
   const detectedName = boot.devices.find((d) => d.id === boot.detected)?.name;
   return (
     <PanelSection title="Setup">
@@ -49,11 +70,11 @@ function Onboarding({ boot, onDone }: { boot: api.Bootstrap; onDone: (s: api.Set
         <div>{detectedName ? `Detected ${detectedName}. Is that right?` : "Device not detected, pick one:"}</div>
       </PanelSectionRow>
       <PanelSectionRow>
-        <DropdownItem label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
+        <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
           selectedOption={device} onChange={(o) => setDevice(o.data)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <DropdownItem label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+        <DropdownItem layout="below" label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
           selectedOption={res ?? native} onChange={(o) => setRes(o.data)} />
       </PanelSectionRow>
       <PanelSectionRow>
@@ -66,12 +87,17 @@ function Onboarding({ boot, onDone }: { boot: api.Bootstrap; onDone: (s: api.Set
 }
 
 function Content() {
-  const [boot, setBoot] = useState<api.Bootstrap>();
-  const [settings, setSettings] = useState<api.Settings>();
-  const [games, setGames] = useState<api.Game[]>([]);
-  const [appid, setAppid] = useState<number>();
-  const [busy, setBusy] = useState(false);
-  const [loadError, setLoadError] = useState<string>();
+  const [boot, setBoot] = useKept<api.Bootstrap | undefined>("boot", undefined);
+  const [settings, setSettings] = useKept<api.Settings | undefined>("settings", undefined);
+  const [games, setGames] = useKept<api.Game[]>("games", []);
+  const [appid, setAppid] = useKept<number | undefined>("appid", undefined);
+  const [busy, setBusy] = useKept("busy", false);
+  const [loadError, setLoadError] = useKept<string | undefined>("loadError", undefined);
+  const [showAll, setShowAll] = useKept("showAll", false);
+  // Only games Loadout knows how to tune, plus any with a profile applied (so Default stays reachable).
+  const visible = showAll ? games : games.filter((g) => g.supported || g.active);
+  // Selection falls back to the first visible game when the current one is hidden.
+  const selected = visible.some((g) => g.appid === appid) ? appid : visible[0]?.appid;
 
   useEffect(() => {
     // A backend that failed to start never answers, so don't wait forever.
@@ -82,8 +108,12 @@ function Content() {
     );
     api.listGames().then((g) => {
       setGames(g);
+      // Keep the user's pick across remounts; default to the running game, else the first one.
+      const picked = kept.get("appid");
+      if (g.some((x) => x.appid === picked)) return;
       const running = window.SteamUIStore?.MainRunningAppID;
-      setAppid(g.some((x) => x.appid === running) ? running : g[0]?.appid);
+      const shown = g.filter((x) => x.supported || x.active);
+      setAppid(shown.some((x) => x.appid === running) ? running : shown[0]?.appid);
     }, errorToast);
   }, []);
 
@@ -97,17 +127,17 @@ function Content() {
   if (!boot || !settings) return <PanelSection><PanelSectionRow>Loading…</PanelSectionRow></PanelSection>;
   if (!settings.device) return <Onboarding boot={boot} onDone={setSettings} />;
 
-  const game = appid !== undefined ? settings.games[String(appid)] : undefined;
+  const game = selected !== undefined ? settings.games[String(selected)] : undefined;
   const current: api.Profile = game?.profile ?? "default";
 
   const pick = async (profile: api.Profile) => {
-    if (appid === undefined || busy) return;
+    if (selected === undefined || busy) return;
     setBusy(true);
     try {
-      const before = await api.getLaunchOptions(appid);
-      const plan = await api.planProfile(appid, profile, before);
+      const before = await api.getLaunchOptions(selected);
+      const plan = await api.planProfile(selected, profile, before);
       // Game config files are never written while the game runs (many games rewrite them on exit).
-      const running = plan.file_writes.length > 0 && window.SteamUIStore?.MainRunningAppID === appid;
+      const running = plan.file_writes.length > 0 && window.SteamUIStore?.MainRunningAppID === selected;
       showModal(
         <ConfirmModal
           strTitle={`Apply ${api.PROFILES.find((p) => p.id === profile)?.label}?`}
@@ -116,13 +146,14 @@ function Content() {
           onOK={async () => {
             try {
               // Re-read: the user may have edited launch options while the dialog was open.
-              const result = await api.applyProfile(appid, profile, await api.getLaunchOptions(appid));
+              const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected));
               if (!result.applied) {
                 errorToast(result.warnings.join(" "));
                 return;
               }
-              api.setLaunchOptions(appid, result.launch_options);
+              api.setLaunchOptions(selected, result.launch_options);
               setSettings((await api.getBootstrap()).settings);
+              setGames(await api.listGames());  // refresh "active", which keeps the game listed
               toaster.toast({ title: "Loadout", body: "Applies the next time the game launches" });
             } catch (e) {
               errorToast(e);
@@ -141,31 +172,36 @@ function Content() {
     <>
       <PanelSection title="Game">
         <PanelSectionRow>
-          <DropdownItem label="Game" disabled={!games.length} strDefaultLabel="No games found"
-            rgOptions={games.map((g) => ({ data: g.appid, label: g.name }))}
-            selectedOption={appid} onChange={(o) => setAppid(o.data)} />
+          <DropdownItem layout="below" label="Game" disabled={!visible.length}
+            strDefaultLabel={showAll ? "No games found" : "No games with Loadout settings"}
+            rgOptions={visible.map((g) => ({ data: g.appid, label: g.supported ? g.name : `${g.name} (generic)` }))}
+            selectedOption={selected} onChange={(o) => setAppid(o.data)} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem label="Profile" disabled={appid === undefined || busy}
+          <ToggleField label="Show all games" checked={showAll} onChange={setShowAll}
+            description="Games without Loadout settings only get the device FPS cap." />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <DropdownItem layout="below" label="Profile" disabled={selected === undefined || busy}
             rgOptions={api.PROFILES.map((p) => ({ data: p.id, label: p.label }))}
             selectedOption={current} onChange={(o) => pick(o.data)} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem label="Resolution for this game" disabled={appid === undefined}
+          <DropdownItem layout="below" label="Resolution for this game" disabled={selected === undefined}
             rgOptions={[{ data: null, label: `Global (${settings.render_resolution})` },
               ...boot.resolutions.map((r) => ({ data: r, label: r }))]}
             selectedOption={game?.resolution ?? null}
-            onChange={(o) => appid !== undefined && api.setGameResolution(appid, o.data).then(setSettings, errorToast)} />
+            onChange={(o) => selected !== undefined && api.setGameResolution(selected, o.data).then(setSettings, errorToast)} />
         </PanelSectionRow>
       </PanelSection>
       <PanelSection title="Settings">
         <PanelSectionRow>
-          <DropdownItem label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
+          <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
             selectedOption={settings.device}
             onChange={(o) => api.saveSettings(o.data, settings.render_resolution ?? "1080p").then(setSettings, errorToast)} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
+          <DropdownItem layout="below" label="Render resolution" rgOptions={boot.resolutions.map((r) => ({ data: r, label: r }))}
             selectedOption={settings.render_resolution}
             onChange={(o) => api.saveSettings(settings.device!, o.data).then(setSettings, errorToast)} />
         </PanelSectionRow>

@@ -220,6 +220,13 @@ def test_game_file_name_must_match_appid(tmp_path):
         games.load_games(tmp_path)
 
 
+def test_annotate_marks_supported_and_active():
+    installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"}, {"appid": 2, "name": "X"}]
+    out = games.annotate(installed, {1245620}, {"1"})
+    assert [(g["appid"], g["supported"], g["active"]) for g in out] == [
+        (1245620, True, False), (1, False, True), (2, False, False)]
+
+
 def test_bundled_games_load():
     er = games.load_games()[1245620]
     assert {v["device"] for v in er["verified"]} == {"rog-xbox-ally", "steam-deck-lcd", "steam-deck-oled"}

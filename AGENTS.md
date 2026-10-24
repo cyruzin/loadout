@@ -20,6 +20,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `data/devices/*.json` bundled device tables (`generic.json` is required)
   - `data/games/<appid>.json` bundled per-game data (device-independent)
 - `src/api.ts` typed `callable()` wrappers + Steam launch-option access. `src/index.tsx` UI.
+  The QAM panel remounts (e.g. when a dropdown menu opens), which wipes `useState`: keep UI state
+  in `useKept` (module-level store in `index.tsx`), never plain `useState`. Dropdowns use
+  `layout="below"` so long values aren't cut off.
 
 ## Commands
     pnpm install && pnpm run build     # frontend -> dist/index.js

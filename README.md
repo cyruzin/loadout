@@ -10,7 +10,9 @@ should work too.
 ## What the MVP does
 
 - Lists installed Steam games by reading `libraryfolders.vdf` and `appmanifest_*.acf` (all libraries,
-  including SD cards). Proton/runtime tools are hidden.
+  including SD cards). By default only games with Loadout settings (`data/games/`) are shown, plus
+  any game that currently has a profile applied; **Show all games** lists the rest as "(generic)",
+  which only get the device FPS cap. Proton/runtime tools are always hidden.
 - Applies a profile by writing a managed block to the game's launch options, e.g.
 
   ```

@@ -18,3 +18,9 @@ def load_games(directory: Path = DATA_DIR) -> dict[int, dict[str, Any]]:
             raise ValidationError(f"{f.name}: file name must be <appid>.json")
         out[doc["appid"]] = doc
     return out
+
+
+def annotate(installed: list[dict[str, Any]], supported: set[int], active: set[str]) -> list[dict[str, Any]]:
+    """Mark which installed games have Loadout data and which have a profile applied right now
+    (those must stay visible, or Default couldn't be restored from the UI)."""
+    return [{**g, "supported": g["appid"] in supported, "active": str(g["appid"]) in active} for g in installed]

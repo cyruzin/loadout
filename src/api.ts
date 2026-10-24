@@ -24,7 +24,7 @@ export interface Bootstrap {
   devices: { id: string; name: string; native: string }[];
   resolutions: string[];
 }
-export interface Game { appid: number; name: string }
+export interface Game { appid: number; name: string; supported: boolean; active: boolean }
 export interface Change { kind: string; target: string; key: string; old: string | null; new: string | null }
 export interface Plan {
   appid: number;

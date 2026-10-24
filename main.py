@@ -54,7 +54,8 @@ class Plugin:
 
     async def list_games(self):
         root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
-        return steam.list_games(root) if root else []
+        installed = steam.list_games(root) if root else []
+        return games.annotate(installed, set(GAMES), set(STATE.load()["games"]))
 
     async def save_settings(self, device, render_resolution):
         if device not in DEVICES or render_resolution not in RESOLUTIONS:
