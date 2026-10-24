@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "generic",
+  "name": "Generic / other device",
+  "match": { "product_name": [] },
+  "native": "1920x1080",
+  "levels": {
+    "performance": { "any": {} },
+    "balanced": { "any": { "fps_limit": 60 } },
+    "quality": { "any": { "fps_limit": 45 } },
+    "battery": { "any": { "fps_limit": 30 } }
+  }
+}

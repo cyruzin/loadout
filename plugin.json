@@ -1,0 +1,11 @@
+{
+  "name": "Loadout",
+  "author": "Cyro Dubeux",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["performance", "profiles"],
+    "description": "One-click per-game Performance, Balanced, Quality and Battery profiles, with a Default (original) state.",
+    "image": ""
+  }
+}

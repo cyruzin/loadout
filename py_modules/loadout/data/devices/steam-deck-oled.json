@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "steam-deck-oled",
+  "name": "Steam Deck OLED",
+  "match": { "product_name": ["Galileo"] },
+  "native": "1280x800",
+  "levels": {
+    "performance": { "any": { "fps_limit": 90 } },
+    "balanced": { "any": { "fps_limit": 60 } },
+    "quality": { "any": { "fps_limit": 45 } },
+    "battery": { "any": { "fps_limit": 30 } }
+  }
+}

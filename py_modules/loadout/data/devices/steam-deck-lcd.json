@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "device": "steam-deck-lcd",
+  "name": "Steam Deck LCD",
+  "match": { "product_name": ["Jupiter"] },
+  "native": "1280x800",
+  "levels": {
+    "performance": { "any": { "fps_limit": 60 } },
+    "balanced": { "any": { "fps_limit": 45 } },
+    "quality": { "any": { "fps_limit": 40 } },
+    "battery": { "any": { "fps_limit": 30 } }
+  }
+}
