@@ -92,6 +92,24 @@ Backups of your original launch options: `~/homebrew/data/Loadout/state.json`.
 
 The backend runs as your normal user (no root flag).
 
+## Releasing
+
+1. Bump `version` in `package.json` (e.g. `0.2.0`) and commit.
+2. Tag and push:
+
+   ```bash
+   git tag v0.2.0
+   git push origin main v0.2.0
+   ```
+
+The [Release workflow](.github/workflows/release.yml) runs the tests, builds `Loadout.zip` and
+publishes it on the GitHub Releases page. The tag must match the `package.json` version.
+
+To build the zip locally: `scripts/package.sh` (writes `out/Loadout.zip`).
+
+Installing a release on a device: Decky → Settings → enable **Developer mode** → Developer →
+**Install Plugin from URL** (paste the `Loadout.zip` asset link) or **Install Plugin from ZIP File**.
+
 ## Project layout
 
 ```

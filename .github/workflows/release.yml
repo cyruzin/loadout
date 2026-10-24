@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Tag must match package.json version
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+
+      - name: Backend tests
+        run: pip install -r requirements-dev.txt && python -m pytest -q
+
+      - name: Frontend checks
+        run: pnpm install --frozen-lockfile && pnpm run typecheck
+
+      - name: Package
+        run: bash scripts/package.sh
+
+      - name: Publish release
+        run: gh release create "$GITHUB_REF_NAME" out/Loadout.zip --title "Loadout $GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
