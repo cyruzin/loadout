@@ -63,7 +63,8 @@ should work too.
 - Launch-option changes (FPS cap, env vars) apply the next time the game launches.
 
 **FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under
-Proton. Native Linux, OpenGL and native Vulkan games are not capped (yet).
+Proton. Native Linux games (OpenGL or Vulkan) are not capped: use Steam's per-game profile in the
+Quick Access Menu (Performance → Use per-game profile → Frame limit) for those.
 
 | Device                          | Panel              | Quality | Balanced | Performance | Uncapped |
 |---------------------------------|--------------------|---------|----------|-------------|----------|

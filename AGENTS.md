@@ -70,6 +70,13 @@ Loadout wrote for another screen, and the UI offers "Update resolution".
 LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
 Wine registry, global/batch profile, export/import.
 OUT (maintainer decision): TDP and other power settings; the user handles those in Steam's QAM.
+OUT (maintainer decision): FPS cap for native Linux games. Setting gamescope's `GAMESCOPE_FPS_LIMIT`
+atom or writing `$MANGOHUD_CONFIGFILE` would fight Steam's own QAM limiter (both are Steam's) and
+need the plugin to act on game launch; Steam's per-game profile already caps those games.
+MangoHud via env was tested on a ROG Xbox Ally in Game Mode: `MANGOHUD=1
+MANGOHUD_CONFIG=fps_limit=N,no_display` capped native Vulkan, did nothing on OpenGL (needs the
+`mangohud` wrapper), and ELDEN RING (Proton) didn't start with `MANGOHUD=1`. A `MANGOHUD_CONFIG`
+on a game also overrides the QAM performance overlay (ValveSoftware/gamescope#1800).
 
 ## Known unknowns (do NOT guess; flag them)
 - Steam frontend APIs (`SteamClient.Apps.*`) are not a public contract.
