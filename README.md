@@ -56,6 +56,22 @@ pacing smooth.
 
 Values live in `py_modules/loadout/data/devices/*.json`.
 
+### Game-specific vs. generic profiles
+
+What a profile does depends on whether the game has a Loadout entry in
+`py_modules/loadout/data/games/`:
+
+| | Game with a Loadout entry (e.g. ELDEN RING) | Any other game ("generic") |
+|---|---|---|
+| FPS cap from the device table | yes | yes |
+| Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
+| In-game graphics settings (config file edits) | yes, where the entry defines them | no |
+
+In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
+you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
+shows only games with an entry by default; turn on **Show all games** to use the generic cap on
+the rest. See [Adding a game](#adding-a-game) to contribute an entry.
+
 Not in the MVP yet: community data repo download, ini/json config files, TDP, global/batch profiles,
 export/import.
 
