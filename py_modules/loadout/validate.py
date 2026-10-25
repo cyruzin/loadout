@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from . import inicfg, xmlcfg
+from . import inicfg, jsoncfg, xmlcfg
 from .textfile import VALUE
 from .paths import ROOT_TOKENS, expand
 
@@ -20,9 +20,11 @@ ENV_DENY = {"LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "SHELL"}
 ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DEVICE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 NATIVE = re.compile(r"^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$")
+# Game arguments after %command%: one plain flag each, e.g. "--launcher-skip".
+ARG = re.compile(r"^--?[A-Za-z][A-Za-z0-9_-]{0,47}$")
 DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
-# Config file formats and their key syntax: XML element names, INI "[Section]Key".
-KEY_FORMATS = {"xml": xmlcfg.KEY, "ini": inicfg.KEY}
+# Config file formats and their key syntax: XML element names, INI "[Section]Key", JSON "/path".
+KEY_FORMATS = {"xml": xmlcfg.KEY, "ini": inicfg.KEY, "json": jsoncfg.KEY}
 
 
 class ValidationError(ValueError):
@@ -152,23 +154,27 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
 
 
 def validate_resolution(x: Any) -> list[dict[str, Any]]:
-    """Where the game stores its resolution: [{path, format, width: [keys], height: [keys]}]."""
+    """Where the game stores its resolution: [{path, format, width: [keys], height: [keys]}], or
+    `size: [keys]` for games that keep "WIDTHxHEIGHT" in one value (Cyberpunk 2077)."""
     if not isinstance(x, list) or len(x) > 4:
         raise ValidationError("resolution: expected list of at most 4")
     out = []
     for i, r in enumerate(x):
         w = f"resolution[{i}]"
-        _obj(r, w, {"path", "format", "width", "height"}, {"path", "format", "width", "height"})
+        _obj(r, w, {"path", "format", "width", "height", "size"}, {"path", "format"})
         key_re = KEY_FORMATS.get(r["format"])
         if key_re is None:
             raise ValidationError(f"{w}.format: expected one of {sorted(KEY_FORMATS)}")
-        for axis in ("width", "height"):
-            keys = r[axis]
-            if (not isinstance(keys, list) or not 0 < len(keys) <= 4
+        if ("width" in r) != ("height" in r) or not ({"width", "size"} & set(r)):
+            raise ValidationError(f"{w}: expected width + height, size, or both")
+        for axis in ("width", "height", "size"):
+            keys = r.get(axis, [])
+            if (not isinstance(keys, list) or len(keys) > 4 or (axis in r and not keys)
                     or not all(isinstance(k, str) and key_re.match(k) for k in keys)):
                 raise ValidationError(f"{w}.{axis}: expected 1..4 {r['format']} keys")
         out.append({"path": _path_template(r["path"], f"{w}.path"), "format": r["format"],
-                    "width": list(r["width"]), "height": list(r["height"])})
+                    "width": list(r.get("width", [])), "height": list(r.get("height", [])),
+                    "size": list(r.get("size", []))})
     return out
 
 
@@ -206,9 +212,15 @@ def validate_game_doc(doc: Any) -> dict[str, Any]:
     for profile, body in profiles.items():
         _obj(body, f"profiles.{profile}", {"launch", "files"})
         env: dict[str, str] = {}
+        args: list[str] = []
         if "launch" in body:
-            env = validate_env(_obj(body["launch"], f"profiles.{profile}.launch", {"env"}, {"env"})["env"])
-        clean[profile] = {"env": env, "files": validate_files(body.get("files", []), f"profiles.{profile}.files")}
+            launch = _obj(body["launch"], f"profiles.{profile}.launch", {"env", "args"})
+            env = validate_env(launch.get("env", {}))
+            args = launch.get("args", [])
+            if (not isinstance(args, list) or len(args) > 8 or len(set(args)) != len(args)
+                    or not all(isinstance(a, str) and ARG.match(a) for a in args)):
+                raise ValidationError(f"profiles.{profile}.launch.args: expected up to 8 plain flags")
+        clean[profile] = {"env": env, "args": list(args), "files": validate_files(body.get("files", []), f"profiles.{profile}.files")}
         for f in clean[profile]["files"]:
             for k, val in f["set"].items():
                 allowed = options.get(f["path"], {}).get(k)

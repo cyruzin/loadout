@@ -34,11 +34,15 @@ should work too.
   LOADOUT_BEGIN=1 DXVK_FRAME_RATE=40 VKD3D_FRAME_RATE=40 LOADOUT_END=1 %command% -novid
   ```
 
+  Game arguments from an entry go right after `%command%` and are recorded in the block
+  (`LOADOUT_ARGS=--launcher-skip`), so Default removes them too.
+
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
 - Edits in-game graphics settings for games that have a data entry: XML configs (e.g. ELDEN
-  RING's `GraphicsConfig.xml` in the Proton prefix) and INI configs (e.g. Lies of P's Unreal
-  Engine `GameUserSettings.ini` in the install folder). Only the listed keys change, each original
+  RING's `GraphicsConfig.xml` in the Proton prefix), INI configs (e.g. Lies of P's Unreal
+  Engine `GameUserSettings.ini` in the install folder) and JSON configs (e.g. Cyberpunk 2077's
+  `UserSettings.json`). Only the listed keys change, each original
   value is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs
   (the confirmation asks you to close it). Default puts every key back unless the game changed it
   since.
@@ -110,15 +114,18 @@ on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry.
 |---|---|---|---|---|
 | ELDEN RING (1245620) | all bundled devices (tested on ROG Xbox Ally) | tuned graphics (high textures/AA, low shadows, motion blur off) | device cap only | every graphics option at its lowest |
 | Lies of P (1627720) | all bundled devices (tested on ROG Xbox Ally) | everything Medium | Medium; shading, shadows, reflections, fog, AO Low | everything Low |
+| Cyberpunk 2077 (1091500) | all bundled devices (tested on ROG Xbox Ally) | the game's "Steam Deck" preset with FSR 2 Quality | the game's "Steam Deck" preset (FSR 2 Balanced) | everything Low/Off, FSR 2 Performance (CPU-bound: drops below 60 in busy areas) |
 
 The FPS cap always comes from the device table above. All ELDEN RING profiles also set
 `MESA_VK_WSI_PRESENT_MODE=immediate`. All Lies of P profiles keep textures at Medium and
 anisotropic filtering at Maximum (cheap, big visual win), use FSR 3 Quality with 0.7 sharpness and
 CACAO, and turn off the game's own frame limit and VSync so Loadout's cap is the only limiter.
+All Cyberpunk 2077 profiles turn ray tracing, frame generation, VSync and the game's own frame
+limit off, and launch with `--launcher-skip` (straight into the game, no CD PROJEKT RED launcher).
 
 ### Not included
 
-- Not yet: community data repo download, JSON config files, global/batch profiles,
+- Not yet: community data repo download, global/batch profiles,
   export/import.
 - Out of scope: TDP and other power settings. Use the Steam Quick Access Menu for those.
 

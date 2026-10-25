@@ -57,6 +57,23 @@ def test_launch_corrupted_markers_left_alone():
     assert text == current and warning
 
 
+@pytest.mark.parametrize("original", ["", "-novid", "%command% -novid", "gamemoderun %command% -x"])
+def test_launch_args_follow_command_and_round_trip(original):
+    written = launch.build(original, {"DXVK_FRAME_RATE": "40"}, ("--launcher-skip", "-skipStartScreen"))
+    assert "%command% --launcher-skip -skipStartScreen" in written
+    assert launch.restore(written, written, original) == (original, None)
+    # State lost: the block alone says which args to remove.
+    assert launch.restore(written, None, None)[0] == launch.restore(launch.build(original, {"A": "1"}), None, None)[0]
+
+
+def test_launch_args_only_and_user_edits_kept():
+    written = launch.build("", {}, ("--launcher-skip",))
+    assert written == "LOADOUT_BEGIN=1 LOADOUT_ARGS=--launcher-skip LOADOUT_END=1 %command% --launcher-skip"
+    assert launch.strip(written + " -console") == "%command% -console"
+    # The user removed our arg by hand: nothing else is touched.
+    assert launch.strip("LOADOUT_BEGIN=1 LOADOUT_ARGS=--launcher-skip LOADOUT_END=1 %command% -x") == "%command% -x"
+
+
 def test_launch_lost_state_still_strips_block():
     assert launch.restore("LOADOUT_BEGIN=1 A=1 LOADOUT_END=1 %command% -x", None, None) == ("%command% -x", None)
 
@@ -155,8 +172,8 @@ def _game(**over):
 
 
 def test_game_doc_valid():
-    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "files": []},
-                                                      "uncapped": {"env": {}, "files": []}}
+    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "args": [], "files": []},
+                                                      "uncapped": {"env": {}, "args": [], "files": []}}
     bare = _game()
     del bare["verified"], bare["source"]
     assert validate_game_doc(bare)["verified"] == [] and validate_game_doc(bare)["source"] is None
@@ -189,10 +206,24 @@ def test_game_doc_valid():
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"a b": "1"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.ini", fmt="ini", values={"sg.Shadow": "1"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"[S]Key": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.json", fmt="json", values={"Key": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.json", fmt="json", values={"/a/../b": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.json", fmt="json", values={"/a[b=c\"]": "1"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.json", fmt="json", values={"/a": "x\"y"})]}}},
+    {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={"/a": "1"})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml", values={})]}}},
     {"profiles": {"quality": {"files": [_xml("{prefix}/x.xml")] * 9}}},
     {"profiles": {"quality": {"launch": {"env": {"LD_PRELOAD": "/x.so"}}}}},
     {"profiles": {"quality": {"launch": {"cmd": "rm -rf ~"}}}},
+    {"profiles": {"quality": {"launch": {"args": "--launcher-skip"}}}},  # must be a list
+    {"profiles": {"quality": {"launch": {"args": ["--a b"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["--a;reboot"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["$(reboot)"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["--x=1"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["%command%"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["-x", "-x"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["notaflag"]}}}},
+    {"profiles": {"quality": {"launch": {"args": ["-x"] * 9}}}},
 ])
 def test_game_doc_rejected(over):
     with pytest.raises(ValidationError):
@@ -218,10 +249,18 @@ def test_game_options_rejected(options):
 
 def test_game_doc_resolution():
     res = [{"path": "{install_dir}/G.ini", "format": "ini", "width": ["[S]X"], "height": ["[S]Y"]}]
-    assert validate_game_doc(_game(resolution=res))["resolution"] == res
+    assert validate_game_doc(_game(resolution=res))["resolution"] == [{**res[0], "size": []}]
     assert games.resolution_files(validate_game_doc(_game(resolution=res)), 1280, 720) == [
         {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]X": "1280", "[S]Y": "720"}}]
     assert games.resolution_files(None, 1280, 720) == []
+
+
+def test_game_doc_resolution_in_one_value():
+    key = "/data[group_name=/video/display]/options[name=Resolution]/value"
+    doc = validate_game_doc(_game(resolution=[{"path": "{prefix}/U.json", "format": "json", "size": [key]}]))
+    assert games.resolution_files(doc, 1920, 1080) == [
+        {"path": "{prefix}/U.json", "format": "json", "set": {key: "1920x1080"}}]
+    assert games.resolution_keys(doc) == {key}
 
 
 @pytest.mark.parametrize("res", [
@@ -230,6 +269,10 @@ def test_game_doc_resolution():
     [{"path": "{prefix}/x", "format": "ini", "width": ["X"], "height": ["[S]Y"]}],
     [{"path": "{prefix}/x", "format": "ini", "width": [], "height": ["[S]Y"]}],
     [{"path": "{prefix}/x", "format": "ini", "width": ["[S]X"]}],
+    [{"path": "{prefix}/x", "format": "ini"}],
+    [{"path": "{prefix}/x", "format": "ini", "size": []}],
+    [{"path": "{prefix}/x", "format": "json", "size": ["[S]X"]}],
+    [{"path": "{prefix}/x", "format": "json", "size": ["/a"] * 5}],
 ])
 def test_game_doc_resolution_rejected(res):
     with pytest.raises(ValidationError):
@@ -239,6 +282,12 @@ def test_game_doc_resolution_rejected(res):
 def test_game_doc_ini_files():
     ok = {"quality": {"files": [_xml("{install_dir}/G.ini", fmt="ini", values={"[/Script/X.Y]sg.A": "1"})]}}
     assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["format"] == "ini"
+
+
+def test_game_doc_json_files():
+    key = "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value"
+    ok = {"quality": {"files": [_xml("{prefix}/U.json", fmt="json", values={key: "Low"})]}}
+    assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["set"] == {key: "Low"}
 
 
 def test_game_file_name_must_match_appid(tmp_path):
@@ -301,9 +350,11 @@ def test_resolution_stale():
 
 def test_bundled_games_load():
     er = games.load_games()[1245620]
-    # Every bundled device except the generic fallback (which isn't a device anyone can verify on).
+    real = set(devices.load_devices()) - {devices.GENERIC}  # nobody can verify on the fallback
     for doc in games.load_games().values():
-        assert {v["device"] for v in doc["verified"]} == set(devices.load_devices()) - {devices.GENERIC}
+        assert {v["device"] for v in doc["verified"]} <= real
+    for appid in (1245620, 1627720, 1091500):  # ELDEN RING, Lies of P, Cyberpunk 2077
+        assert {v["device"] for v in games.load_games()[appid]["verified"]} == real
     for profile in ("quality", "balanced", "performance", "uncapped"):
         assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
 
@@ -459,3 +510,32 @@ def test_store_corrupt_file_is_kept_aside(tmp_path):
     (tmp_path / "s.json").write_text("{nope")
     assert JsonStore(tmp_path / "s.json", {"a": 1}).load() == {"a": 1}
     assert (tmp_path / "s.corrupt.json").exists()
+
+
+def test_plan_game_args_and_default_removes_them():
+    level = {"fps_limit": 30}
+    plan = planner.build_plan(1091500, "quality", "-novid", None, level, False, game_args=("--launcher-skip",))
+    assert plan.launch_options.endswith("%command% --launcher-skip -novid")
+    assert ("arg", "--launcher-skip") in {(c.kind, c.key) for c in plan.changes}
+    entry = {"original": plan.original, "written": plan.launch_options}
+    back = planner.build_plan(1091500, "default", plan.launch_options, entry, level, False,
+                              game_args=("--launcher-skip",))
+    assert back.launch_options == "-novid" and not [c for c in back.changes if c.kind == "arg"]
+
+
+def test_bundled_cyberpunk_sets_index_with_every_list_value():
+    """Cyberpunk reads a fixed list's "index", not its "value" (seen on a device: only the
+    value changed and the game kept the old setting). Both must be set, and agree."""
+    doc = json.loads((games.DATA_DIR / "1091500.json").read_text())
+    options = next(iter(doc["options"].values()))
+    lists = {k: v for k, v in options.items() if k.endswith("/value") and v != ["false", "true"]}
+    assert len(lists) == 20
+    for name, profile in doc["profiles"].items():
+        values = profile["files"][0]["set"]
+        for key, accepted in lists.items():
+            assert values[key.replace("/value", "/index")] == str(accepted.index(values[key])), (name, key)
+
+
+def test_bundled_cyberpunk_skips_launcher_on_every_profile():
+    for name, profile in games.load_games()[1091500]["profiles"].items():
+        assert profile["args"] == ["--launcher-skip"], name

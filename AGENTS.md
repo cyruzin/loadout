@@ -16,9 +16,12 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
     writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
   - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
   - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused
+  - `jsoncfg.py` JSON read/set by `/member/array[field=value]/...` path, same byte-preserving
+    approach; the value keeps its JSON type; ambiguous paths, null, objects and arrays refused
   - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback; `plan_keys`
     changes only some keys (resolution) and keeps everything else Loadout set, originals included
-  - `launch.py` marker-delimited launch-option block (build / strip / restore)
+  - `launch.py` marker-delimited launch-option block (build / strip / restore); game args go
+    right after `%command%` and are recorded in the block (`LOADOUT_ARGS`) so strip needs no state
   - `planner.py` pure `build_plan` (dry-run, never writes)
   - `devices.py` DMI detection, device table, level fallback chain
   - `steam.py` libraryfolders.vdf / appmanifest parsing, per-game prefix/install paths
@@ -46,6 +49,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - Validate data structurally and semantically before use. Unknown fields are rejected.
 - Never use str.format, eval, exec, pickle, yaml.load or shell=True with data.
 - Env vars: allowlist prefixes + denylist; values quoted with shlex.quote in launch options.
+  Game args: plain flags only (`validate.ARG`: no values, spaces or shell characters).
 - Writes are atomic (temp file + os.replace), all-or-nothing, never while the game runs.
   Backups are per key, never whole files.
 - Paths from data go through `safe_path` (prefix/install dir only); files are opened with O_NOFOLLOW.
@@ -60,14 +64,14 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   not text pasted from a terminal: check with `xxd` on the device first.
 
 ## Scope
-IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env, per-game XML/INI config keys,
+IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env and game args, per-game XML/INI/JSON config keys,
 launch options, settings file,
 device detection, game resolution written to config files only when the user picks one for the game
 (games whose entry has `resolution`), capped to the screen's max mode (`read_display`: external
 display when docked). No pick = never touch it: Steam's game-resolution setting and the game decide.
 Screen changes are never acted on silently: `games.resolution_stale` flags games whose resolution
 Loadout wrote for another screen, and the UI offers "Update resolution".
-LATER (do not build unless asked): community data download + SHA-256, JSON config handler,
+LATER (do not build unless asked): community data download + SHA-256,
 Wine registry, global/batch profile, export/import.
 OUT (maintainer decision): TDP and other power settings; the user handles those in Steam's QAM.
 OUT (maintainer decision): FPS cap for native Linux games. Setting gamescope's `GAMESCOPE_FPS_LIMIT`
@@ -84,8 +88,13 @@ on a game also overrides the QAM performance overlay (ValveSoftware/gamescope#18
   (github.com/hhd-dev/hhd), not yet confirmed on our own hardware. Some original Legion Go units
   report no valid product_name (HHD falls back to BIOS version); those must pick the device manually.
 - Which resolution keys a game actually reads: Lies of P uses ResolutionSizeX/Y (+ LastUserConfirmed)
-  and ELDEN RING the Window/FullScreen/Borderless pairs; confirm on device after adding a game.
+  and ELDEN RING the Window/FullScreen/Borderless pairs, Cyberpunk one "WIDTHxHEIGHT" value
+  (`size`; a dynamic list, `value` is read: confirmed on a ROG Xbox Ally); confirm on device after
+  adding a game.
   `SteamClient.Apps.SetAppResolutionOverride` (Steam-level) is untested and not used.
+- Which field a JSON game reads: Cyberpunk reads `index` for fixed lists (seen on device: `value`
+  alone was ignored) and `value` for dynamic ones (FSR2, QuickPresets). The entry sets both for
+  fixed lists; `test_bundled_cyberpunk_sets_index_with_every_list_value` keeps them in sync.
 - `/sys/class/drm` gives the display's supported modes (first = max), not the output resolution
   chosen in Steam; that lives in `SteamClient.System.DisplayManager.GetState` (undocumented).
 

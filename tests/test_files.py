@@ -1,3 +1,4 @@
+import re
 import codecs
 import os
 import tempfile
@@ -528,3 +529,178 @@ def test_resolution_alone_does_not_touch_other_files_with_the_same_key(tmp_path)
 
 def test_plan_keys_needs_the_game_folder():
     assert files.plan_keys([{"path": "{prefix}/x.ini", "format": "ini", "set": {"[S]A": "1"}}], None, {}).error
+
+# --- JSON handler ----------------------------------------------------------
+
+from loadout import jsoncfg  # noqa: E402
+
+# Same shape and bytes as Cyberpunk 2077's UserSettings.json on a device: UTF-8 without BOM,
+# LF, 4-space indent, no final newline.
+CP_JSON = b"""{
+    "version": 152,
+    "data": [
+        {
+            "group_name": "/graphics/advanced",
+            "options": [
+                {
+                    "name": "AmbientOcclusion",
+                    "type": "string_list",
+                    "value": "Medium",
+                    "default_value": "High",
+                    "values": [
+                        "Off",
+                        "Low",
+                        "Medium",
+                        "High"
+                    ]
+                },
+                {
+                    "name": "Anisotropy",
+                    "type": "int_list",
+                    "value": 16,
+                    "default_value": 16,
+                    "values": [1, 4, 8, 16]
+                }
+            ]
+        },
+        {
+            "group_name": "/graphics/basic",
+            "options": [
+                {
+                    "name": "FilmGrain",
+                    "type": "bool",
+                    "value": false,
+                    "default_value": true
+                },
+                {
+                    "name": "FieldOfView",
+                    "type": "float",
+                    "value": 80.0,
+                    "default_value": 80.0
+                },
+                {
+                    "name": "Dup",
+                    "value": 1
+                },
+                {
+                    "name": "Dup",
+                    "value": 2
+                }
+            ]
+        }
+    ]
+}"""
+AO = "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value"
+ANISO = "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/value"
+GRAIN = "/data[group_name=/graphics/basic]/options[name=FilmGrain]/value"
+FOV = "/data[group_name=/graphics/basic]/options[name=FieldOfView]/value"
+
+
+def test_json_reads_typed_values_as_text():
+    assert jsoncfg.read_values(CP_JSON, [AO, ANISO, GRAIN, FOV, "/version"]) == {
+        AO: "Medium", ANISO: "16", GRAIN: "false", FOV: "80.0", "/version": "152"}
+
+
+def test_json_set_preserves_every_other_byte_and_type():
+    out = jsoncfg.set_values(CP_JSON, {AO: "Low", ANISO: "8", GRAIN: "true", FOV: "90.5"})
+    assert out == (CP_JSON.replace(b'"value": "Medium"', b'"value": "Low"')
+                   .replace(b'"value": 16,', b'"value": 8,')
+                   .replace(b'"value": false', b'"value": true')
+                   .replace(b'"value": 80.0', b'"value": 90.5'))
+    assert jsoncfg.set_values(out, {AO: "Medium", ANISO: "16", GRAIN: "false", FOV: "80.0"}) == CP_JSON
+
+
+@pytest.mark.parametrize("key", [
+    "/data[group_name=/graphics/basic]/options[name=Dup]/value",  # two elements match
+    "/data[group_name=/graphics/nope]/options[name=FilmGrain]/value",
+    "/data[group_name=/graphics/basic]/options[name=FilmGrain]/missing",
+    "/data[group_name=/graphics/basic]/options",  # an array, not a plain value
+    "/data[group_name=/graphics/basic]",  # an object
+    "/version[a=b]",  # selector on a number
+    "/data/options",  # member of an array
+    "data", "/a/../b", "/a[b=c]]", "/" + "a/" * 9 + "a",
+])
+def test_json_key_errors(key):
+    with pytest.raises(ValueError):
+        jsoncfg.read_values(CP_JSON, [key])
+
+
+@pytest.mark.parametrize("raw", [b'{"a": 1', b'{"a": 1}}', b"", b'{"a": NaN', b"\xff\xfe\xff"])
+def test_json_malformed(raw):
+    with pytest.raises(ValueError):
+        jsoncfg.read_values(raw, ["/a"])
+
+
+def test_json_null_and_duplicate_members_refused():
+    with pytest.raises(ValueError):
+        jsoncfg.read_values(b'{"a": null}', ["/a"])
+    with pytest.raises(ValueError):
+        jsoncfg.read_values(b'{"a": 1, "a": 2}', ["/a"])
+
+
+@pytest.mark.parametrize("key,value", [
+    (AO, 'x", "injected": "1'), (AO, "a\\u0022b"), (AO, "a\nb"),
+    (GRAIN, "yes"), (GRAIN, "1"), (ANISO, "x"), (ANISO, "1e9"), (ANISO, "true"), (ANISO, "0x10"),
+])
+def test_json_rejects_unsafe_or_mistyped_values(key, value):
+    with pytest.raises(ValueError):
+        jsoncfg.set_values(CP_JSON, {key: value})
+
+
+def test_json_two_keys_for_one_value_refused():
+    raw = b'{"o": [{"n": "a", "m": "b", "value": 1}]}'
+    with pytest.raises(ValueError):
+        jsoncfg.set_values(raw, {"/o[n=a]/value": "2", "/o[m=b]/value": "3"})
+
+
+def test_json_plan_apply_restore_through_files(tmp_path):
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/UserSettings.json"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(CP_JSON)
+    spec = [{"path": "{prefix}/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/"
+                     "UserSettings.json", "format": "json", "set": {AO: "Off", GRAIN: "false"}}]
+    plan = apply(spec, ctx, {})
+    assert [(c.key, c.old, c.new) for c in plan.changes] == [(AO, "Medium", "Off")]
+    assert b'"value": "Off"' in cfg.read_bytes()
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == CP_JSON
+
+
+def _cyberpunk_file(values):
+    """UserSettings.json shaped like the device's (4-space indent, LF, no final newline), holding
+    the entry's keys with typed values."""
+    import json
+    groups: dict = {}
+    for key, value in values.items():
+        group, name, field = re.match(r"^/data\[group_name=(.+)\]/options\[name=(\w+)\]/(\w+)$", key).groups()
+        typed = {"true": True, "false": False}.get(value, value)
+        if re.fullmatch(r"[0-9.]+", value):
+            typed = float(value) if "." in value else int(value)
+        groups.setdefault(group, {}).setdefault(name, {"name": name, "type": "x"})[field] = typed
+    doc = {"version": 152, "data": [{"group_name": g, "options": list(o.values())} for g, o in groups.items()]}
+    return json.dumps(doc, indent=4).encode()
+
+
+def test_cyberpunk_profiles_round_trip(tmp_path):
+    from loadout import games
+    profiles = games.load_games()[1091500]["profiles"]
+    balanced = profiles["balanced"]["files"]
+    raw = _cyberpunk_file(balanced[0]["set"])  # the game's "Steam Deck" preset
+    assert raw.startswith(b'{\n    "version": 152,\n    "data": [\n') and not raw.endswith(b"\n")
+    ctx = ctx_for(tmp_path)
+    cfg = Path(safe_path(balanced[0]["path"], ctx, roots(ctx)))
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(raw)
+
+    plan = apply(profiles["quality"]["files"], ctx, {})
+    assert {(c.key.split("name=")[-1], c.old, c.new) for c in plan.changes} == {
+        ("FSR2]/value", "Balanced", "Quality"), ("QuickPresets]/value", "Steam Deck", "Custom")}
+    plan = apply(balanced, ctx, plan.state)
+    assert cfg.read_bytes() == raw
+    plan = apply(profiles["performance"]["files"], ctx, plan.state)
+    changed = {c.key.split("options[")[-1]: c.new for c in plan.changes}
+    assert changed["name=FSR2]/value"] == "Performance"
+    assert changed["name=TextureQuality]/value"] == "Low" and changed["name=TextureQuality]/index"] == "0"
+    apply([], ctx, plan.state)
+    assert cfg.read_bytes() == raw

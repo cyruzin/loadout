@@ -87,11 +87,13 @@ const reportError = (e: unknown) => report(false, String(e));
 
 function describe(plan: api.Plan, running: boolean) {
   const env = plan.changes.filter((c) => c.kind === "env");
+  const args = plan.changes.filter((c) => c.kind === "arg");
   const launch = plan.changes.find((c) => c.kind === "launch_option");
   const fileKeys = plan.changes.filter((c) => c.kind === "file_key");
   return (
     <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
       {env.map((c) => <div key={c.key}>{c.key} = {c.new}</div>)}
+      {args.map((c) => <div key={c.key}>Game argument: {c.key}</div>)}
       {fileKeys.length > 0 && <div style={{ marginTop: 8 }}>Game settings ({fileKeys[0].target.split("/").pop()}):</div>}
       {fileKeys.map((c) => <div key={c.target + c.key}>{c.key}: {c.old} → {c.new}</div>)}
       {launch ? (

@@ -23,12 +23,13 @@ def load_games(directory: Path = DATA_DIR) -> dict[int, dict[str, Any]]:
 def resolution_files(doc: Optional[dict[str, Any]], width: int, height: int) -> list[dict[str, Any]]:
     """File edits that set the game's resolution, in the same shape as a profile's `files`."""
     return [{"path": r["path"], "format": r["format"],
-             "set": {**dict.fromkeys(r["width"], str(width)), **dict.fromkeys(r["height"], str(height))}}
+             "set": {**dict.fromkeys(r["width"], str(width)), **dict.fromkeys(r["height"], str(height)),
+                     **dict.fromkeys(r.get("size", []), f"{width}x{height}")}}
             for r in (doc or {}).get("resolution", [])]
 
 
 def resolution_keys(doc: Optional[dict[str, Any]]) -> set[str]:
-    return {k for r in (doc or {}).get("resolution", []) for k in r["width"] + r["height"]}
+    return {k for r in (doc or {}).get("resolution", []) for k in r["width"] + r["height"] + r.get("size", [])}
 
 
 def resolution_stale(written: dict[str, dict[str, dict[str, str]]], res_files: list[dict[str, Any]]) -> bool:

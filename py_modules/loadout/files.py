@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
-from . import inicfg, xmlcfg
+from . import inicfg, jsoncfg, xmlcfg
 from .paths import safe_path
 from .store import atomic_write
 
@@ -28,9 +28,11 @@ class FilePlan(NamedTuple):
 
 
 def handler(key: str) -> Any:
-    """INI keys are written "[Section]Key"; XML element names can't start with "[". Validation
-    ties each file's keys to its declared format, so a file's keys all pick the same handler."""
-    return inicfg if key.startswith("[") else xmlcfg
+    """INI keys are written "[Section]Key", JSON keys "/path"; XML element names can't start with
+    either. Validation ties each file's keys to its declared format, so they all pick the same one."""
+    if key.startswith("["):
+        return inicfg
+    return jsoncfg if key.startswith("/") else xmlcfg
 
 
 def read_nofollow(p: Path) -> bytes:

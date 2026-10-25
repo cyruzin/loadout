@@ -85,8 +85,19 @@ Supported formats:
   `[/Script/ProjectP.LGameUserSettings]FSR3Mode`. A key that appears more than once in its section
   can't be set.
 
-JSON is planned; for those games you can still add an entry with launch env vars only, or open an
-issue with the file attached.
+- **JSON** (Cyberpunk 2077's `UserSettings.json`). Keys are paths of object members, each starting
+  with `/`; a member holding an array of objects picks its one element whose field equals a value,
+  written `name[field=value]`:
+  `/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value`. The value keeps its
+  JSON type: write `"true"`/`"false"` for booleans and plain numbers (`"8"`, `"0.5"`) for numbers.
+  `null`, objects and arrays can't be set, and a path must match exactly one value.
+  Check which field the game actually reads: Cyberpunk keeps both `value` and `index` (the
+  position in `values`) for fixed lists and reads `index`, so its entry sets both, e.g.
+  `.../options[name=AmbientOcclusion]/index` = `"2"` with `value` = `"Medium"`. Changing only
+  `value` looked right in the file but the game kept the old setting.
+
+Other formats (Wine registry, binary saves) aren't supported: you can still add an entry with
+launch env vars only, or open an issue with the file attached.
 
 ### 2.2 Check the file's bytes
 
@@ -142,7 +153,7 @@ model):
 
 - **Paths** start with `{prefix}/` (the game's Proton prefix) or `{install_dir}/` (the game's
   install folder). Nothing else is allowed, and Loadout refuses paths that escape those folders.
-- **`format`** is `xml` or `ini`; see `1627720.json` (Lies of P) for an INI entry.
+- **`format`** is `xml`, `ini` or `json`; see `1627720.json` (Lies of P) for an INI entry.
 - **`resolution`** (optional, top level): where the game stores its resolution, so Loadout can
   write a resolution the user picks for the game (it never writes one otherwise). List every key that holds the width and
   the height (the game may keep several copies), then check on the device that the game really
@@ -157,6 +168,10 @@ model):
   }]
   ```
 
+  Games that keep the resolution as one `"WIDTHxHEIGHT"` value use `size` instead of (or besides)
+  `width`/`height`, e.g. Cyberpunk 2077:
+  `"size": ["/data[group_name=/video/display]/options[name=Resolution]/value"]`.
+
   Without it, the resolution options are hidden for that game. Profiles must not set resolution
   keys themselves: resolution is the user's choice, not part of a profile.
 - **Keys** must already exist in the file; copy them exactly (case matters).
@@ -164,6 +179,9 @@ model):
   profile's `files` are about graphics, not frame rate.
 - **Env vars** must match the allowlist (`DXVK_`, `VKD3D_`, `PROTON_`, `MANGOHUD`,
   `WINEDLLOVERRIDES`, `SDL_`, `MESA_`, `RADV_`).
+- **Game arguments** go in `"launch": { "args": ["--launcher-skip"] }` (Cyberpunk 2077 skips its
+  launcher with it). Each one is a plain flag (`-x` or `--name`, letters, digits, `_` and `-`):
+  no values, spaces or shell characters. Loadout puts them right after `%command%`.
 - **`source`**: where the settings came from (forum post, guide, ProtonDB report). If they're your
   own, link the PR or an issue describing your tests.
 - **`verified`**: only devices where you did the checks in [section 1](#1-verify-an-existing-game-on-your-device).

@@ -12,7 +12,7 @@ ALL_PROFILES = ("default",) + PROFILES
 
 # NamedTuple, not dataclasses: Decky's frozen Python only ships the stdlib modules it uses itself.
 class Change(NamedTuple):
-    kind: Literal["launch_option", "env", "file_key"]
+    kind: Literal["launch_option", "env", "arg", "file_key"]
     target: str
     key: str
     old: Optional[str]  # None means "absent"
@@ -48,7 +48,8 @@ def profile_env(level: dict[str, Any], game_env: Optional[dict[str, str]] = None
 
 def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str, Any]],
                level: dict[str, Any], approximate: bool,
-               game_env: Optional[dict[str, str]] = None, file_plan: Optional[FilePlan] = None) -> Plan:
+               game_env: Optional[dict[str, str]] = None, file_plan: Optional[FilePlan] = None,
+               game_args: tuple[str, ...] = ()) -> Plan:
     """`entry` is this game's state ({"original", "written"}) or None if Loadout never touched it."""
     if profile not in ALL_PROFILES:
         raise ValueError(f"unknown profile: {profile!r}")
@@ -57,10 +58,12 @@ def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str,
     base, warning = launch.restore(current, entry.get("written"), entry.get("original"))
     warnings = [warning] if warning else []
     env = {} if profile == "default" else profile_env(level, game_env)
-    new = base if warning else launch.build(base, env)
+    args = () if profile == "default" else tuple(game_args)
+    new = base if warning else launch.build(base, env, args)
     if approximate and profile != "default":
         warnings.append("No exact values for this device/resolution; using approximate ones.")
     changes = [Change("env", "launch_options", k, None, v) for k, v in env.items()] if not warning else []
+    changes += [Change("arg", "launch_options", a, None, a) for a in args] if not warning else []
     if new != current:
         changes.append(Change("launch_option", "launch_options", "LaunchOptions", current, new))
     fp = file_plan or FilePlan()

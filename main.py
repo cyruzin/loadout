@@ -65,7 +65,8 @@ def _plan(appid, profile, current):
         specs += res_files
     entry = STATE.load()["games"].get(key)
     file_plan = files.plan_files(specs, _ctx(appid), (entry or {}).get("files", {}))
-    return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan)
+    return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan,
+                              tuple(spec.get("args", ())))
 
 
 class Plugin:
