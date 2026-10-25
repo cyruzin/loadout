@@ -52,7 +52,7 @@ should work too.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
-- Sets the game's resolution, for games whose entry says where it is stored (both bundled games),
+- Sets the game's resolution, for games whose entry says where it is stored (all bundled games),
   only when you pick one in **Resolution for this game**. The default, **Keep the game's
   setting**, never touches it: the game and Steam's own game-resolution setting decide. Picking a
   resolution writes it right away and leaves the applied profile as it is (game closed, like any
@@ -64,7 +64,7 @@ should work too.
   after docking or undocking, the panel says so and **Update resolution** rewrites it.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
-- Launch-option changes (FPS cap, env vars) apply the next time the game launches.
+- Launch-option changes (FPS cap, env vars, game arguments) apply the next time the game launches.
 
 **FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under
 Proton. Native Linux games (OpenGL or Vulkan) are not capped: use Steam's per-game profile in the
@@ -100,6 +100,7 @@ What a profile does depends on whether the game has a Loadout entry in
 |---|---|---|
 | FPS cap from the device table | yes | yes |
 | Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
+| Per-game launch arguments (e.g. `--launcher-skip`) | yes | no |
 | In-game graphics settings (config file edits) | yes, where the entry defines them | no |
 | Game resolution written to the game's config | when you pick one, where the entry maps it | no |
 

@@ -153,7 +153,8 @@ model):
 
 - **Paths** start with `{prefix}/` (the game's Proton prefix) or `{install_dir}/` (the game's
   install folder). Nothing else is allowed, and Loadout refuses paths that escape those folders.
-- **`format`** is `xml`, `ini` or `json`; see `1627720.json` (Lies of P) for an INI entry.
+- **`format`** is `xml`, `ini` or `json`; see `1627720.json` (Lies of P) for an INI entry and
+  `1091500.json` (Cyberpunk 2077) for a JSON one.
 - **`resolution`** (optional, top level): where the game stores its resolution, so Loadout can
   write a resolution the user picks for the game (it never writes one otherwise). List every key that holds the width and
   the height (the game may keep several copies), then check on the device that the game really
