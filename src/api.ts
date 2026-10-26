@@ -10,7 +10,7 @@ export const PROFILES: { id: Profile; label: string }[] = [
   { id: "uncapped", label: "Uncapped" },
 ];
 
-export interface GameSettings { profile: Profile; resolution: string | null }
+export interface GameSettings { profile: Profile }
 export interface Settings {
   schema_version: number;
   device: string | null;
@@ -19,18 +19,14 @@ export interface Settings {
   game_filter: GameFilter;
   last_game: number | null;
 }
-export interface Display { native: string; resolution: string; external: boolean }
 export interface Bootstrap {
   settings: Settings;
-  display: Display;
-  stale: number[];  // games whose written resolution belongs to another screen
   detected: string | null;
   devices: { id: string; name: string; native: string }[];
-  resolutions: string[];
 }
 export type GameFilter = "verified" | "loadout" | "all";
 export interface Game {
-  appid: number; name: string; supported: boolean; verified: boolean; resolution: boolean; profile: Profile | null;
+  appid: number; name: string; supported: boolean; verified: boolean; profile: Profile | null;
 }
 export interface Change { kind: string; target: string; key: string; old: string | null; new: string | null }
 export interface Plan {
@@ -47,10 +43,7 @@ export interface ApplyResult { launch_options: string; warnings: string[]; appli
 export const getBootstrap = callable<[], Bootstrap>("get_bootstrap");
 export const listGames = callable<[], Game[]>("list_games");
 export const saveSettings = callable<[device: string], Settings>("save_settings");
-export const setGameResolution = callable<[appid: number, resolution: string | null], Settings>("set_game_resolution");
 export const setGameFilter = callable<[filter: GameFilter], Settings>("set_game_filter");
-export const applyResolution = callable<[appid: number], { applied: boolean; warnings: string[]; resolution?: string }>(
-  "apply_resolution");
 export const planProfile = callable<[appid: number, profile: Profile, current: string], Plan>("plan_profile");
 export const applyProfile = callable<[appid: number, profile: Profile, current: string], ApplyResult>("apply_profile");
 

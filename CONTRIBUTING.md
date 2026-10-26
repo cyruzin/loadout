@@ -31,7 +31,8 @@ The game already has `py_modules/loadout/data/games/<appid>.json`, but your devi
    and, for each one:
    - read the confirmation diff: every key should change to the value in the JSON;
    - launch the game and check that the in-game menu shows those settings;
-   - if the entry has `resolution`: the game starts at the resolution picked in Loadout;
+   - after launching, check the file again: some games overwrite values from their save on
+     launch, and a key the game doesn't read from this file doesn't belong in the entry;
    - play a few minutes: FPS cap holds, no crashes, no visual glitches.
 3. Apply **Default (original)** with the game closed and check that your previous settings and
    launch options are back.
@@ -155,26 +156,10 @@ model):
   install folder). Nothing else is allowed, and Loadout refuses paths that escape those folders.
 - **`format`** is `xml`, `ini` or `json`; see `1627720.json` (Lies of P) for an INI entry and
   `1091500.json` (Cyberpunk 2077) for a JSON one.
-- **`resolution`** (optional, top level): where the game stores its resolution, so Loadout can
-  write a resolution the user picks for the game (it never writes one otherwise). List every key that holds the width and
-  the height (the game may keep several copies), then check on the device that the game really
-  starts at the chosen resolution:
-
-  ```json
-  "resolution": [{
-    "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-    "format": "ini",
-    "width": ["[/Script/ProjectP.LGameUserSettings]ResolutionSizeX", "[/Script/ProjectP.LGameUserSettings]LastUserConfirmedResolutionSizeX"],
-    "height": ["[/Script/ProjectP.LGameUserSettings]ResolutionSizeY", "[/Script/ProjectP.LGameUserSettings]LastUserConfirmedResolutionSizeY"]
-  }]
-  ```
-
-  Games that keep the resolution as one `"WIDTHxHEIGHT"` value use `size` instead of (or besides)
-  `width`/`height`, e.g. Cyberpunk 2077:
-  `"size": ["/data[group_name=/video/display]/options[name=Resolution]/value"]`.
-
-  Without it, the resolution options are hidden for that game. Profiles must not set resolution
-  keys themselves: resolution is the user's choice, not part of a profile.
+- **No resolution keys**: the user picks the resolution in the game's menu
+  (`test_bundled_games_leave_resolution_alone` enforces it). Leave out any key the game doesn't
+  read from the file: Hogwarts Legacy rewrites its upscaler and resolution in
+  `GameUserSettings.ini` from `SavedUserOptions.sav` on launch, so its entry sets only `sg.*`.
 - **Keys** must already exist in the file; copy them exactly (case matters).
 - **Profiles**: define only the ones you tested. The FPS cap comes from the device table, so a
   profile's `files` are about graphics, not frame rate.

@@ -73,13 +73,6 @@
       "/data[group_name=/graphics/basic]/options[name=Vignette]/value": ["false", "true"]
     }
   },
-  "resolution": [
-    {
-      "path": "{prefix}/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/UserSettings.json",
-      "format": "json",
-      "size": ["/data[group_name=/video/display]/options[name=Resolution]/value"]
-    }
-  ],
   "profiles": {
     "quality": {
       "launch": {

@@ -32,14 +32,6 @@
       "GrassQuality": ["MEDIUM", "HIGH", "MAX"]
     }
   },
-  "resolution": [
-    {
-      "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-      "format": "xml",
-      "width": ["Resolution-WindowScreenWidth", "Resolution-FullScreenWidth", "Resolution-BorderlessScreenWidth"],
-      "height": ["Resolution-WindowScreenHeight", "Resolution-FullScreenHeight", "Resolution-BorderlessScreenHeight"]
-    }
-  ],
   "profiles": {
     "quality": {
       "launch": {

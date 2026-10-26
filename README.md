@@ -23,7 +23,7 @@ should work too.
   with a note saying so, and a **Search games** field (opens the on-screen keyboard) finds any
   other game in that filter by name.
 
-  When the panel opens it shows the last game you applied a profile or resolution to (remembered
+  When the panel opens it shows the last game you applied a profile to (remembered
   across Steam and Decky restarts), else the game that's running.
 
   Games with a profile applied show it next to the name (e.g. "Crysis 3 (generic) · Performance").
@@ -52,16 +52,6 @@ should work too.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
   it on first run.
-- Sets the game's resolution, for games whose entry says where it is stored (all bundled games),
-  only when you pick one in **Resolution for this game**. The default, **Keep the game's
-  setting**, never touches it: the game and Steam's own game-resolution setting decide. Picking a
-  resolution writes it right away and leaves the applied profile as it is (game closed, like any
-  config change); going back to Keep restores the original, and so does Default. Choices go up to
-  the display's maximum, read from `/sys/class/drm` (built-in panel, or the external display when
-  docked) and shown under Device as **Display max**; that's the screen's highest mode, not the
-  output resolution set in Steam. The width follows the screen's aspect ratio: 720p is 1280×720
-  on a 16:9 ROG Ally and 1152×720 on a 16:10 Steam Deck. If a picked resolution no longer fits
-  after docking or undocking, the panel says so and **Update resolution** rewrites it.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
 - Launch-option changes (FPS cap, env vars, game arguments) apply the next time the game launches.
@@ -102,33 +92,25 @@ What a profile does depends on whether the game has a Loadout entry in
 | Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
 | Per-game launch arguments (e.g. `--launcher-skip`) | yes | no |
 | In-game graphics settings (config file edits) | yes, where the entry defines them | no |
-| Game resolution written to the game's config | when you pick one, where the entry maps it | no |
 
 In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
 you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
 shows only verified games by default; pick **All games** in the Show filter to use the generic cap
 on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry.
 
-### Bundled games
+### Supported games
 
-| Game | Verified on | Quality | Balanced | Performance / Uncapped |
-|---|---|---|---|---|
-| ELDEN RING (1245620) | all bundled devices (tested on ROG Xbox Ally) | tuned graphics (high textures/AA, low shadows, motion blur off) | device cap only | every graphics option at its lowest |
-| Lies of P (1627720) | all bundled devices (tested on ROG Xbox Ally) | everything Medium | Medium; shading, shadows, reflections, fog, AO Low | everything Low |
-| Cyberpunk 2077 (1091500) | all bundled devices (tested on ROG Xbox Ally) | the game's "Steam Deck" preset with FSR 2 Quality | the game's "Steam Deck" preset (FSR 2 Balanced) | everything Low/Off, FSR 2 Performance (CPU-bound: drops below 60 in busy areas) |
-
-The FPS cap always comes from the device table above. All ELDEN RING profiles also set
-`MESA_VK_WSI_PRESENT_MODE=immediate`. All Lies of P profiles keep textures at Medium and
-anisotropic filtering at Maximum (cheap, big visual win), use FSR 3 Quality with 0.7 sharpness and
-CACAO, and turn off the game's own frame limit and VSync so Loadout's cap is the only limiter.
-All Cyberpunk 2077 profiles turn ray tracing, frame generation, VSync and the game's own frame
-limit off, and launch with `--launcher-skip` (straight into the game, no CD PROJEKT RED launcher).
+ELDEN RING, Lies of P, Cyberpunk 2077 and Hogwarts Legacy have game-specific entries. What each
+profile sets per game, and on which devices it was verified: [GAMES.md](GAMES.md).
 
 ### Not included
 
 - Not yet: community data repo download, global/batch profiles,
   export/import.
 - Out of scope: TDP and other power settings. Use the Steam Quick Access Menu for those.
+- Out of scope since 0.3.1: the game's resolution. It was removed because it's easy to change
+  in the game's own menu. If you picked a resolution in Loadout 0.3.0, applying a profile with
+  the game closed puts the original back.
 
 ## Requirements
 
@@ -214,6 +196,7 @@ src/                       React/TypeScript frontend (@decky/ui, @decky/api)
 tests/                     pytest suite
 scripts/package.sh         builds out/Loadout.zip
 .github/workflows/         tag-triggered release
+GAMES.md                   supported games and what each profile sets
 CONTRIBUTING.md            how to verify/add games and devices
 AGENTS.md                  rules for coding agents
 ```

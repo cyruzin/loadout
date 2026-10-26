@@ -14,10 +14,6 @@ import { FaSlidersH } from "react-icons/fa";
 import * as api from "./api";
 
 
-// The resolution ceiling: the screen in use right now, built-in panel or (docked) external display.
-const nativeLabel = (d: api.Display) => `${d.resolution} · ${d.external ? "docked" : "handheld"}`;
-const height = (resolution: string) => parseInt(resolution, 10);
-
 const profileLabel = (id: string | null) => api.PROFILES.find((p) => p.id === id)?.label ?? id;
 
 // Cumulative filters: each one also shows what the previous one does.
@@ -218,9 +214,7 @@ function Content() {
                 return;
               }
               api.setLaunchOptions(selected, result.launch_options);
-              const fresh = await api.getBootstrap();  // settings + which resolutions are stale
-              setBoot(fresh);
-              setSettings(fresh.settings);
+              setSettings((await api.getBootstrap()).settings);
               setGames(await api.listGames());  // refresh the applied profile shown next to each game
               report(true, profile === "default"
                 ? `${info?.name}: original settings restored.`
@@ -238,66 +232,9 @@ function Content() {
     }
   };
 
-  // Written for another screen (e.g. Native while docked, now handheld): offer to rewrite them.
-  const stale = games.filter((g) => boot.stale.includes(g.appid));
-  const updateStale = async () => {
-    const running = window.SteamUIStore?.MainRunningAppID;
-    const skipped: string[] = [];
-    const failed: string[] = [];
-    for (const g of stale) {
-      if (g.appid === running) {
-        skipped.push(g.name);  // the game would overwrite its config on exit
-        continue;
-      }
-      try {
-        const result = await api.applyResolution(g.appid);
-        if (!result.applied) failed.push(`${g.name}: ${result.warnings.join(" ")}`);
-      } catch (e) {
-        failed.push(`${g.name}: ${e}`);
-      }
-    }
-    setBoot(await api.getBootstrap());
-    if (failed.length) return reportError(failed.join(" "));
-    report(!skipped.length, skipped.length
-      ? `Updated, except ${skipped.join(", ")}: close it and update again.`
-      : `Resolution updated for ${stale.map((g) => g.name).join(", ")}.`);
-  };
-
-  const changeResolution = async (target: number, resolution: string | null) => {
-    try {
-      setSettings(await api.setGameResolution(target, resolution));
-      if (window.SteamUIStore?.MainRunningAppID === target) {
-        // Same rule as profiles: the game would overwrite its config on exit.
-        reportError("Saved. Close the game and pick the resolution again to write it.");
-        return;
-      }
-      const result = await api.applyResolution(target);
-      if (!result.applied) return reportError(result.warnings.join(" "));
-      setBoot(await api.getBootstrap());  // this game's resolution is no longer stale
-      report(true, result.resolution
-        ? `${info?.name} set to ${result.resolution}. Takes effect the next time it launches.`
-        : `${info?.name}: Loadout no longer changes its resolution (original restored).`);
-    } catch (e) {
-      reportError(e);
-    }
-  };
-
   return (
     <>
       <PanelSection title="Game">
-        {stale.length > 0 && (
-          <>
-            <PanelSectionRow>
-              <Notice color={AMBER}>
-                Screen is now {nativeLabel(boot.display)}. {stale.map((g) => g.name).join(", ")}{" "}
-                {stale.length > 1 ? "have" : "has"} a resolution for another screen written.
-              </Notice>
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ButtonItem layout="below" onClick={updateStale}>Update resolution</ButtonItem>
-            </PanelSectionRow>
-          </>
-        )}
         <PanelSectionRow>
           <DropdownItem layout="below" label="Show" rgOptions={FILTERS.map((f) => ({ data: f.id, label: f.label }))}
             selectedOption={filter.id}
@@ -347,25 +284,11 @@ function Content() {
             </Notice>
           </PanelSectionRow>
         )}
-        {/* Only games whose entry says where the resolution lives: elsewhere it would do nothing. */}
-        {info?.resolution && (
-          <PanelSectionRow>
-            <DropdownItem layout="below" label="Resolution for this game"
-              description="Written to the game's settings right away; the profile stays as it is."
-              rgOptions={[{ data: null, label: "Keep the game's setting" },
-                ...boot.resolutions.filter((r) => height(r) <= height(boot.display.resolution))
-                  .map((r) => ({ data: r, label: r }))]}
-              selectedOption={game?.resolution ?? null}
-              onChange={(o) => selected !== undefined && changeResolution(selected, o.data)} />
-          </PanelSectionRow>
-        )}
       </PanelSection>
       <PanelSection title="Settings">
         <PanelSectionRow>
           <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
             selectedOption={settings.device}
-            // On the focusable dropdown, not a text row below it: the QAM only scrolls to focusable items.
-            description={`Display max: ${nativeLabel(boot.display)} (${boot.display.native})`}
             onChange={(o) => api.saveSettings(o.data).then(setSettings, reportError)} />
         </PanelSectionRow>
       </PanelSection>

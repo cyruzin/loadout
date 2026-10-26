@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shlex
 
 import pytest
@@ -247,38 +248,6 @@ def test_game_options_rejected(options):
         validate_game_doc(_game(options=options))
 
 
-def test_game_doc_resolution():
-    res = [{"path": "{install_dir}/G.ini", "format": "ini", "width": ["[S]X"], "height": ["[S]Y"]}]
-    assert validate_game_doc(_game(resolution=res))["resolution"] == [{**res[0], "size": []}]
-    assert games.resolution_files(validate_game_doc(_game(resolution=res)), 1280, 720) == [
-        {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]X": "1280", "[S]Y": "720"}}]
-    assert games.resolution_files(None, 1280, 720) == []
-
-
-def test_game_doc_resolution_in_one_value():
-    key = "/data[group_name=/video/display]/options[name=Resolution]/value"
-    doc = validate_game_doc(_game(resolution=[{"path": "{prefix}/U.json", "format": "json", "size": [key]}]))
-    assert games.resolution_files(doc, 1920, 1080) == [
-        {"path": "{prefix}/U.json", "format": "json", "set": {key: "1920x1080"}}]
-    assert games.resolution_keys(doc) == {key}
-
-
-@pytest.mark.parametrize("res", [
-    {}, [{"path": "/etc/x", "format": "ini", "width": ["[S]X"], "height": ["[S]Y"]}],
-    [{"path": "{prefix}/x", "format": "json", "width": ["[S]X"], "height": ["[S]Y"]}],
-    [{"path": "{prefix}/x", "format": "ini", "width": ["X"], "height": ["[S]Y"]}],
-    [{"path": "{prefix}/x", "format": "ini", "width": [], "height": ["[S]Y"]}],
-    [{"path": "{prefix}/x", "format": "ini", "width": ["[S]X"]}],
-    [{"path": "{prefix}/x", "format": "ini"}],
-    [{"path": "{prefix}/x", "format": "ini", "size": []}],
-    [{"path": "{prefix}/x", "format": "json", "size": ["[S]X"]}],
-    [{"path": "{prefix}/x", "format": "json", "size": ["/a"] * 5}],
-])
-def test_game_doc_resolution_rejected(res):
-    with pytest.raises(ValidationError):
-        validate_game_doc(_game(resolution=res))
-
-
 def test_game_doc_ini_files():
     ok = {"quality": {"files": [_xml("{install_dir}/G.ini", fmt="ini", values={"[/Script/X.Y]sg.A": "1"})]}}
     assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["format"] == "ini"
@@ -299,16 +268,14 @@ def test_game_file_name_must_match_appid(tmp_path):
 def test_annotate_marks_supported_verified_and_profile():
     installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"},
                  {"appid": 2, "name": "Lies of P"}]
-    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}], "resolution": [{"path": "x"}]},
-            2: {"verified": [], "resolution": []}}
+    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}]}, 2: {"verified": []}}
     applied = {"1": {"profile": "performance"}}
-    rows = lambda device: [(g["supported"], g["verified"], g["resolution"], g["profile"])
+    rows = lambda device: [(g["supported"], g["verified"], g["profile"])
                            for g in games.annotate(installed, docs, applied, device)]
-    assert rows("rog-xbox-ally") == [(True, True, True, None), (False, False, False, "performance"),
-                                     (True, False, False, None)]
+    assert rows("rog-xbox-ally") == [(True, True, None), (False, False, "performance"), (True, False, None)]
     # Verified is per device: the same entry is untested on a Legion Go.
-    assert rows("legion-go")[0] == (True, False, True, None)
-    assert rows(None)[0] == (True, False, True, None)
+    assert rows("legion-go")[0] == (True, False, None)
+    assert rows(None)[0] == (True, False, None)
 
 
 def test_elden_ring_performance_and_uncapped_use_lowest_settings():
@@ -332,20 +299,29 @@ def test_lies_of_p_profiles_match_the_tested_presets():
     assert sg("balanced", "Shadow") == "0" and sg("quality", "Shadow") == "1"
 
 
-def test_resolution_keys():
-    doc = {"resolution": [{"width": ["[S]X", "[S]X2"], "height": ["[S]Y"]}]}
-    assert games.resolution_keys(doc) == {"[S]X", "[S]X2", "[S]Y"}
-    assert games.resolution_keys(None) == set() and games.resolution_keys({}) == set()
+def test_hogwarts_profiles_are_graphics_only():
+    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[990080]["profiles"].items()}
+    for p, values in profiles.items():
+        # The game reloads its upscaler/resolution section from its save: only scalability groups.
+        assert all(k.startswith("[ScalabilityGroups]sg.") for k in values), p
+        assert len(values) == 11 and values["[ScalabilityGroups]sg.AntiAliasingQuality"] == "3"
+    assert profiles["performance"] == profiles["uncapped"] == profiles["balanced"]
+    assert profiles["quality"]["[ScalabilityGroups]sg.ShadingQuality"] == "2"
 
 
-def test_resolution_stale():
-    res_1080 = [{"path": "p", "format": "ini", "set": {"[S]X": "1920", "[S]Y": "1080"}}]
-    written = lambda x, y: {"/g.ini": {"[S]X": {"old": "1280", "new": x}, "[S]Y": {"old": "720", "new": y},
-                                       "[S]sg.Shadow": {"old": "1", "new": "0"}}}
-    assert games.resolution_stale(written("3840", "2160"), res_1080)  # written docked, now handheld
-    assert not games.resolution_stale(written("1920", "1080"), res_1080)
-    assert not games.resolution_stale({"/g.ini": {"[S]sg.Shadow": {"old": "1", "new": "0"}}}, res_1080)  # never wrote it
-    assert not games.resolution_stale({}, res_1080) and not games.resolution_stale(written("3840", "2160"), [])
+def test_bundled_games_leave_resolution_alone():
+    """Out of scope since 0.3.1: the game's resolution is set in its own menu."""
+    banned = re.compile(r"ResolutionSize|Screen(Width|Height)|Resolution-|name=Resolution\]")
+    for appid, doc in games.load_games().items():
+        for name, body in doc["profiles"].items():
+            for f in body["files"]:
+                for key in f["set"]:
+                    assert not banned.search(key), (appid, name, key)
+
+
+def test_game_doc_resolution_field_rejected():
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(resolution=[]))
 
 
 def test_bundled_games_load():
@@ -353,7 +329,7 @@ def test_bundled_games_load():
     real = set(devices.load_devices()) - {devices.GENERIC}  # nobody can verify on the fallback
     for doc in games.load_games().values():
         assert {v["device"] for v in doc["verified"]} <= real
-    for appid in (1245620, 1627720, 1091500):  # ELDEN RING, Lies of P, Cyberpunk 2077
+    for appid in (1245620, 1627720, 1091500, 990080):  # ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy
         assert {v["device"] for v in games.load_games()[appid]["verified"]} == real
     for profile in ("quality", "balanced", "performance", "uncapped"):
         assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
@@ -384,53 +360,11 @@ def test_bundled_devices_load_and_detect():
     assert devices.native_class(devs["steam-deck-oled"]) == "800p"
 
 
-@pytest.mark.parametrize("res, native, size", [
-    ("720p", "1920x1080", (1280, 720)), ("1080p", "1920x1080", (1920, 1080)),
-    ("720p", "1280x800", (1152, 720)), ("800p", "1280x800", (1280, 800)),
-    ("1080p", "1920x1200", (1728, 1080)), ("1600p", "2560x1600", (2560, 1600)),
-])
-def test_resolution_size_keeps_the_panel_aspect(res, native, size):
-    assert devices.resolution_size(res, native) == size
-
-
 def _connector(root, name, status, modes=""):
     d = root / name
     d.mkdir()
     (d / "status").write_text(status + "\n")
     (d / "modes").write_text(modes)
-
-
-def test_read_display_builtin_panel(tmp_path):
-    _connector(tmp_path, "card1-eDP-1", "connected", "1920x1080\n1280x720\n")
-    _connector(tmp_path, "card1-DP-1", "disconnected")
-    assert devices.read_display(tmp_path) == ("1920x1080", False)
-
-
-def test_read_display_docked_prefers_external(tmp_path):
-    _connector(tmp_path, "card1-eDP-1", "connected", "1920x1080\n")
-    _connector(tmp_path, "card1-HDMI-A-1", "connected", "3840x2160\n2560x1440\n1920x1080\n")
-    assert devices.read_display(tmp_path) == ("3840x2160", True)
-
-
-@pytest.mark.parametrize("modes", ["", "garbage\n", "0x0\n"])
-def test_read_display_ignores_bad_modes(tmp_path, modes):
-    _connector(tmp_path, "card1-DP-1", "connected", modes)
-    _connector(tmp_path, "card1-eDP-1", "connected", "1280x800\n")
-    assert devices.read_display(tmp_path) == ("1280x800", False)
-
-
-def test_read_display_nothing(tmp_path):
-    assert devices.read_display(tmp_path) is None
-    assert devices.read_display(tmp_path / "missing") is None
-
-
-@pytest.mark.parametrize("pick, native, expected", [
-    (None, "1920x1080", "1080p"), ("720p", "1920x1080", "720p"),
-    ("1440p", "1920x1080", "1080p"),  # never above the screen (undocked after picking a TV resolution)
-    ("1440p", "3840x2160", "1440p"), (None, "1280x800", "800p"),
-])
-def test_clamp_resolution(pick, native, expected):
-    assert devices.clamp_resolution(pick, native) == expected
 
 
 def test_read_dmi(tmp_path):

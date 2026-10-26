@@ -110,26 +110,6 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
     return FilePlan(tuple(changes), tuple(warnings), None, tuple(writes), state)
 
 
-def plan_keys(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
-               previous: dict[str, dict[str, dict[str, str]]]) -> FilePlan:
-    """Like plan_files, but only the keys in `specs` change: everything else Loadout set stays as
-    it is (the resolution can change without re-applying the profile). Originals are kept."""
-    if ctx is None:
-        return FilePlan(error="Game folder not found, so its config files can't be checked.")
-    roots = [Path(ctx["prefix"]), Path(ctx["install_dir"])]
-    try:
-        paths = {str(safe_path(s["path"], ctx, roots)) for s in specs}
-    except (ValueError, PermissionError) as e:
-        return FilePlan(error=f"Unsafe config path rejected: {e}")
-    keys = {k for s in specs for k in s["set"]}
-    subset = {p: {k: v for k, v in previous.get(p, {}).items() if k in keys} for p in paths}
-    plan = plan_files(specs, ctx, {p: ks for p, ks in subset.items() if ks})
-    merged = {p: dict(ks) for p, ks in previous.items()}
-    for p, ks in (plan.state or {}).items():
-        merged.setdefault(p, {}).update(ks)
-    return plan._replace(state=merged)
-
-
 def apply_writes(writes: tuple[tuple[str, dict[str, str]], ...]) -> None:
     """All or nothing: if any file fails, the ones already written get their original bytes back."""
     done: list[tuple[Path, bytes]] = []

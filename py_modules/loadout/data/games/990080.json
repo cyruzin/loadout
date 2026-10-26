@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "appid": 990080,
+  "name": "Hogwarts Legacy",
+  "verified": [
+    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-26" },
+    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-26" },
+    { "proton": "default", "device": "rog-ally", "date": "2026-10-26" },
+    { "proton": "default", "device": "rog-ally-x", "date": "2026-10-26" },
+    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-26" },
+    { "proton": "default", "device": "rog-xbox-ally-x", "date": "2026-10-26" },
+    { "proton": "default", "device": "rog-xbox-ally-x20", "date": "2026-10-26" },
+    { "proton": "default", "device": "legion-go", "date": "2026-10-26" },
+    { "proton": "default", "device": "legion-go-2", "date": "2026-10-26" },
+    { "proton": "default", "device": "legion-go-s", "date": "2026-10-26" }
+  ],
+  "options": {
+    "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini": {
+      "[ScalabilityGroups]sg.ViewDistanceQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.AntiAliasingQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.ShadowQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.PostProcessQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.TextureQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.EffectsQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.FoliageQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.ShadingQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.VolumetricsQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.SkyQuality": ["0", "1", "2", "3"],
+      "[ScalabilityGroups]sg.PopulationQuality": ["0", "1", "2", "3"]
+    }
+  },
+  "profiles": {
+    "quality": {
+      "files": [
+        {
+          "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
+          "format": "ini",
+          "set": {
+            "[ScalabilityGroups]sg.ViewDistanceQuality": "1",
+            "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
+            "[ScalabilityGroups]sg.ShadowQuality": "1",
+            "[ScalabilityGroups]sg.PostProcessQuality": "1",
+            "[ScalabilityGroups]sg.TextureQuality": "1",
+            "[ScalabilityGroups]sg.EffectsQuality": "1",
+            "[ScalabilityGroups]sg.FoliageQuality": "1",
+            "[ScalabilityGroups]sg.ShadingQuality": "2",
+            "[ScalabilityGroups]sg.VolumetricsQuality": "0",
+            "[ScalabilityGroups]sg.SkyQuality": "1",
+            "[ScalabilityGroups]sg.PopulationQuality": "0"
+          }
+        }
+      ]
+    },
+    "balanced": {
+      "files": [
+        {
+          "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
+          "format": "ini",
+          "set": {
+            "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
+            "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
+            "[ScalabilityGroups]sg.ShadowQuality": "0",
+            "[ScalabilityGroups]sg.PostProcessQuality": "0",
+            "[ScalabilityGroups]sg.TextureQuality": "0",
+            "[ScalabilityGroups]sg.EffectsQuality": "0",
+            "[ScalabilityGroups]sg.FoliageQuality": "0",
+            "[ScalabilityGroups]sg.ShadingQuality": "0",
+            "[ScalabilityGroups]sg.VolumetricsQuality": "0",
+            "[ScalabilityGroups]sg.SkyQuality": "0",
+            "[ScalabilityGroups]sg.PopulationQuality": "0"
+          }
+        }
+      ]
+    },
+    "performance": {
+      "files": [
+        {
+          "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
+          "format": "ini",
+          "set": {
+            "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
+            "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
+            "[ScalabilityGroups]sg.ShadowQuality": "0",
+            "[ScalabilityGroups]sg.PostProcessQuality": "0",
+            "[ScalabilityGroups]sg.TextureQuality": "0",
+            "[ScalabilityGroups]sg.EffectsQuality": "0",
+            "[ScalabilityGroups]sg.FoliageQuality": "0",
+            "[ScalabilityGroups]sg.ShadingQuality": "0",
+            "[ScalabilityGroups]sg.VolumetricsQuality": "0",
+            "[ScalabilityGroups]sg.SkyQuality": "0",
+            "[ScalabilityGroups]sg.PopulationQuality": "0"
+          }
+        }
+      ]
+    },
+    "uncapped": {
+      "files": [
+        {
+          "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
+          "format": "ini",
+          "set": {
+            "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
+            "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
+            "[ScalabilityGroups]sg.ShadowQuality": "0",
+            "[ScalabilityGroups]sg.PostProcessQuality": "0",
+            "[ScalabilityGroups]sg.TextureQuality": "0",
+            "[ScalabilityGroups]sg.EffectsQuality": "0",
+            "[ScalabilityGroups]sg.FoliageQuality": "0",
+            "[ScalabilityGroups]sg.ShadingQuality": "0",
+            "[ScalabilityGroups]sg.VolumetricsQuality": "0",
+            "[ScalabilityGroups]sg.SkyQuality": "0",
+            "[ScalabilityGroups]sg.PopulationQuality": "0"
+          }
+        }
+      ]
+    }
+  }
+}
