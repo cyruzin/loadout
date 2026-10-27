@@ -56,11 +56,42 @@ If something didn't work, don't add `verified`: open an issue instead with what 
 Find the appid in the game's Steam store URL (`store.steampowered.com/app/<appid>/`) or with
 `ls ~/.local/share/Steam/steamapps/appmanifest_*.acf`.
 
+### 2.0 Look it up first
+
+- **Where the config lives**: [PCGamingWiki](https://www.pcgamingwiki.com/)'s page for the game,
+  section "Configuration file(s) location". It also says when settings are in the registry or a
+  binary save instead (not supported, see below).
+- **What each profile should set**: tested handheld settings such as
+  [SteamDeckHQ](https://steamdeckhq.com/game-reviews/) or [ShareDeck](https://sharedeck.games/).
+  Link the one you used in `source`. Use them for the choice of settings only: keys and values
+  still come from the real file (2.1 to 2.3), and their TDP/power advice is out of scope.
+
 ### 2.1 Find the config file
 
-Configure the game the way you want the profile to be, then **quit the game** (many games only
-write their config on exit). Right after quitting, list the files the game just wrote inside its
-Proton prefix:
+The quickest way is the capture script. It records which keys change while you change settings
+in the game, and also does 2.3 for you. It comes with Loadout; on the device (Konsole or SSH),
+with the game closed and launched at least once before:
+
+```bash
+python3 ~/homebrew/plugins/Loadout/scripts/capture.py <appid> > ~/draft.json
+```
+
+1. Label the current settings (e.g. `original`): it takes a snapshot.
+2. Launch the game, set every setting the profiles will touch to its **lowest** option, quit the
+   game, then label it (e.g. `low`). Repeat with each step up to the highest (`medium`, `high`, …),
+   then press Enter on an empty label.
+3. `~/draft.json` has, per file and in the entry's syntax, `options` (each value seen, in the
+   order you captured them) and `snapshots` (what each round set, ready to paste into a
+   profile's `files`). The terminal lists the files that changed but can't be set: if the only
+   change was a `.sav` or `user.reg`, the game keeps those settings in a save or the registry.
+
+The draft shows what the game **writes**, not what it **reads** back: keep the checks in 2.5. Drop
+keys that aren't graphics settings (window position, timestamps, resolution). Copy 2.2's byte
+check for the PR as well.
+
+To do it by hand instead: configure the game the way you want the profile to be, then **quit the
+game** (many games only write their config on exit). Right after quitting, list the files the
+game just wrote inside its Proton prefix:
 
 ```bash
 P=~/.local/share/Steam/steamapps/compatdata/<appid>/pfx    # SD card: /run/media/*/steamapps/compatdata/<appid>/pfx
@@ -85,6 +116,8 @@ Supported formats:
   can contain dots and slashes, e.g. `[ScalabilityGroups]sg.ShadowQuality` or
   `[/Script/ProjectP.LGameUserSettings]FSR3Mode`. A key that appears more than once in its section
   can't be set.
+  Files without sections, like CryEngine's `game.cfg` (Crysis 3 Remastered), write keys before any
+  header as `[]Key`, e.g. `[]sys_spec_Shadows`; lines starting with `;`, `#` or `--` are comments.
 
 - **JSON** (Cyberpunk 2077's `UserSettings.json`). Keys are paths of object members, each starting
   with `/`; a member holding an array of objects picks its one element whose field equals a value,

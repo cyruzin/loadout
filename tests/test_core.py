@@ -2,12 +2,22 @@ import json
 import os
 import re
 import shlex
+from enum import IntEnum
 
 import pytest
 
 from loadout import devices, games, launch, planner, steam
 from loadout.store import JsonStore
 from loadout.validate import ValidationError, validate_device_doc, validate_env, validate_game_doc
+
+
+class Game(IntEnum):
+    """Steam appids of the bundled entries (data/games/<appid>.json)."""
+    ELDEN_RING = 1245620
+    LIES_OF_P = 1627720
+    CYBERPUNK_2077 = 1091500
+    HOGWARTS_LEGACY = 990080
+    CRYSIS_3 = 2096610
 
 # --- env -------------------------------------------------------------------
 
@@ -113,11 +123,37 @@ def test_plan_blocked_on_corrupted_markers():
 def test_game_env_merges_and_overrides_device_env():
     level = {"fps_limit": 30, "env": {"DXVK_ASYNC": "1", "MESA_VK_WSI_PRESENT_MODE": "fifo"}}
     game_env = {"MESA_VK_WSI_PRESENT_MODE": "immediate", "VKD3D_FRAME_RATE": "25"}
-    plan = planner.build_plan(1245620, "quality", "", None, level, False, game_env)
+    plan = planner.build_plan(Game.ELDEN_RING, "quality", "", None, level, False, game_env)
     tokens = shlex.split(plan.launch_options)
     assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "DXVK_ASYNC=1" in tokens
     assert "VKD3D_FRAME_RATE=25" in tokens and "DXVK_FRAME_RATE=30" in tokens
-    assert planner.build_plan(1245620, "default", "", None, level, False, game_env).launch_options == ""
+    assert planner.build_plan(Game.ELDEN_RING, "default", "", None, level, False, game_env).launch_options == ""
+
+
+def test_fps_cap_off_keeps_game_env_and_args():
+    """Cap switch off: the user caps with Steam's own limiter; the profile's own env/args stay."""
+    level = {"fps_limit": 30, "env": {"DXVK_ASYNC": "1"}}
+    plan = planner.build_plan(Game.ELDEN_RING, "quality", "-novid", None, level, False,
+                              {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, None, ("--launcher-skip",), fps_cap=False)
+    tokens = shlex.split(plan.launch_options)
+    assert not any("FRAME_RATE" in t or "maxFrameRate" in t for t in tokens)
+    assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "DXVK_ASYNC=1" in tokens
+    assert "--launcher-skip" in tokens
+    # Nothing else to write (graphics-only entry): launch options stay exactly as they were.
+    assert planner.build_plan(Game.CRYSIS_3, "quality", "-novid", None, {"fps_limit": 30}, False,
+                              fps_cap=False).launch_options == "-novid"
+
+
+def test_fps_cap_reaches_current_dxvk_through_dxvk_config():
+    """Proton 11's DXVK ignores DXVK_FRAME_RATE; it reads maxFrameRate from DXVK_CONFIG."""
+    plan = planner.build_plan(Game.CRYSIS_3, "balanced", "-novid", None, {"fps_limit": 40}, False)
+    tokens = shlex.split(plan.launch_options)
+    assert "DXVK_CONFIG=dxgi.maxFrameRate=40;d3d9.maxFrameRate=40" in tokens
+    assert "DXVK_FRAME_RATE=40" in tokens and "VKD3D_FRAME_RATE=40" in tokens
+    # The ";" is quoted, so the shell doesn't split the line there; Default still restores exactly.
+    assert "'dxgi.maxFrameRate=40;d3d9.maxFrameRate=40'" in plan.launch_options
+    assert launch.restore(plan.launch_options, plan.launch_options, "-novid") == ("-novid", None)
+    assert "DXVK_CONFIG" not in planner.build_plan(Game.CRYSIS_3, "uncapped", "", None, {}, False).launch_options
 
 # --- validation ------------------------------------------------------------
 
@@ -279,7 +315,7 @@ def test_annotate_marks_supported_verified_and_profile():
 
 
 def test_elden_ring_performance_and_uncapped_use_lowest_settings():
-    doc = json.loads((games.DATA_DIR / "1245620.json").read_text())
+    doc = json.loads((games.DATA_DIR / f"{Game.ELDEN_RING.value}.json").read_text())
     (path, options), = doc["options"].items()
     for profile in ("performance", "uncapped"):
         values = doc["profiles"][profile]["files"][0]["set"]
@@ -288,7 +324,7 @@ def test_elden_ring_performance_and_uncapped_use_lowest_settings():
 
 
 def test_lies_of_p_profiles_match_the_tested_presets():
-    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[1627720]["profiles"].items()}
+    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[Game.LIES_OF_P]["profiles"].items()}
     sg = lambda p, name: profiles[p][f"[ScalabilityGroups]sg.{name}Quality"]
     for p in profiles:
         # Every profile: anisotropic at max, texture at medium, game's own FPS limit off.
@@ -300,7 +336,7 @@ def test_lies_of_p_profiles_match_the_tested_presets():
 
 
 def test_hogwarts_profiles_are_graphics_only():
-    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[990080]["profiles"].items()}
+    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[Game.HOGWARTS_LEGACY]["profiles"].items()}
     for p, values in profiles.items():
         # The game reloads its upscaler/resolution section from its save: only scalability groups.
         assert all(k.startswith("[ScalabilityGroups]sg.") for k in values), p
@@ -309,9 +345,26 @@ def test_hogwarts_profiles_are_graphics_only():
     assert profiles["quality"]["[ScalabilityGroups]sg.ShadingQuality"] == "2"
 
 
+def test_crysis_3_profiles_follow_the_protondb_deck_reports():
+    """Quality High (40 Hz with drops, so 30), Balanced Medium (45 Hz locked), Performance Low (60)."""
+    profiles = games.load_games()[Game.CRYSIS_3]["profiles"]
+    levels = {"quality": "3", "balanced": "2", "performance": "1", "uncapped": "1"}
+    for name, level in levels.items():
+        values = profiles[name]["files"][0]["set"]
+        specs = {k: v for k, v in values.items() if k.startswith("[]sys_spec_") and k != "[]sys_spec_TextureResolution"}
+        assert len(specs) == 7 and set(specs.values()) == {level}, name
+        assert values["[]sys_spec_TextureResolution"] == "3" and values["[]r_vSync"] == "0", name
+        assert values["[]r_TexMaxAnisotropy"] == values["[]r_TexMinAnisotropy"] == "16", name
+        assert values["[]r_MotionBlurShutterSpeed"] == "0", name  # Disabled
+        # The game reloads these from its encrypted profile on launch: set in the menu instead.
+        assert "[]sys_spec_raytracing" not in values and "[]r_AntialiasingMode" not in values, name
+    assert profiles["performance"] == profiles["uncapped"]
+
+
 def test_bundled_games_leave_resolution_alone():
     """Out of scope since 0.3.1: the game's resolution is set in its own menu."""
-    banned = re.compile(r"ResolutionSize|Screen(Width|Height)|Resolution-|name=Resolution\]")
+    banned = re.compile(r"ResolutionSize|Screen(Width|Height)|Resolution-|name=Resolution\]"
+                        r"|\]r_(Width|Height|DisplayFreq)$")  # CryEngine game.cfg
     for appid, doc in games.load_games().items():
         for name, body in doc["profiles"].items():
             for f in body["files"]:
@@ -325,12 +378,13 @@ def test_game_doc_resolution_field_rejected():
 
 
 def test_bundled_games_load():
-    er = games.load_games()[1245620]
+    er = games.load_games()[Game.ELDEN_RING]
     real = set(devices.load_devices()) - {devices.GENERIC}  # nobody can verify on the fallback
     for doc in games.load_games().values():
         assert {v["device"] for v in doc["verified"]} <= real
-    for appid in (1245620, 1627720, 1091500, 990080):  # ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy
-        assert {v["device"] for v in games.load_games()[appid]["verified"]} == real
+    assert set(games.load_games()) == set(Game)  # a new entry goes in Game too
+    for game in Game:  # every bundled game is verified on every device
+        assert {v["device"] for v in games.load_games()[game]["verified"]} == real
     for profile in ("quality", "balanced", "performance", "uncapped"):
         assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
 
@@ -448,11 +502,11 @@ def test_store_corrupt_file_is_kept_aside(tmp_path):
 
 def test_plan_game_args_and_default_removes_them():
     level = {"fps_limit": 30}
-    plan = planner.build_plan(1091500, "quality", "-novid", None, level, False, game_args=("--launcher-skip",))
+    plan = planner.build_plan(Game.CYBERPUNK_2077, "quality", "-novid", None, level, False, game_args=("--launcher-skip",))
     assert plan.launch_options.endswith("%command% --launcher-skip -novid")
     assert ("arg", "--launcher-skip") in {(c.kind, c.key) for c in plan.changes}
     entry = {"original": plan.original, "written": plan.launch_options}
-    back = planner.build_plan(1091500, "default", plan.launch_options, entry, level, False,
+    back = planner.build_plan(Game.CYBERPUNK_2077, "default", plan.launch_options, entry, level, False,
                               game_args=("--launcher-skip",))
     assert back.launch_options == "-novid" and not [c for c in back.changes if c.kind == "arg"]
 
@@ -460,7 +514,7 @@ def test_plan_game_args_and_default_removes_them():
 def test_bundled_cyberpunk_sets_index_with_every_list_value():
     """Cyberpunk reads a fixed list's "index", not its "value" (seen on a device: only the
     value changed and the game kept the old setting). Both must be set, and agree."""
-    doc = json.loads((games.DATA_DIR / "1091500.json").read_text())
+    doc = json.loads((games.DATA_DIR / f"{Game.CYBERPUNK_2077.value}.json").read_text())
     options = next(iter(doc["options"].values()))
     lists = {k: v for k, v in options.items() if k.endswith("/value") and v != ["false", "true"]}
     assert len(lists) == 20
@@ -471,5 +525,5 @@ def test_bundled_cyberpunk_sets_index_with_every_list_value():
 
 
 def test_bundled_cyberpunk_skips_launcher_on_every_profile():
-    for name, profile in games.load_games()[1091500]["profiles"].items():
+    for name, profile in games.load_games()[Game.CYBERPUNK_2077]["profiles"].items():
         assert profile["args"] == ["--launcher-skip"], name

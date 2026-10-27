@@ -7,6 +7,7 @@ import {
   showModal,
   staticClasses,
   TextField,
+  ToggleField,
 } from "@decky/ui";
 import { definePlugin, toaster } from "@decky/api";
 import { ReactNode, useEffect, useState } from "react";
@@ -136,6 +137,8 @@ function Content() {
   const [busy, setBusy] = useKept("busy", false);
   const [loadError, setLoadError] = useKept<string | undefined>("loadError", undefined);
   const [status] = useKept<Status | undefined>("status", undefined);
+  // Remounts the cap switch after a cancelled confirm, so it shows the saved value again.
+  const [capTick, setCapTick] = useKept("capTick", 0);
   const filter = FILTERS.find((f) => f.id === settings?.game_filter) ?? FILTERS[0];
   const [search, setSearch] = useKept("search", "");
   const inFilter = games.filter(filter.keep);
@@ -191,13 +194,15 @@ function Content() {
   const game = selected !== undefined ? settings.games[String(selected)] : undefined;
   const info = games.find((g) => g.appid === selected);
   const current: api.Profile = game?.profile ?? "default";
+  const fpsCap = game?.fps_cap ?? true;
+  const currentCap = boot.fps_limits?.[current];
 
-  const pick = async (profile: api.Profile) => {
+  const pick = async (profile: api.Profile, cap = fpsCap) => {
     if (selected === undefined || busy) return;
     setBusy(true);
     try {
       const before = await api.getLaunchOptions(selected);
-      const plan = await api.planProfile(selected, profile, before);
+      const plan = await api.planProfile(selected, profile, before, cap);
       // Game config files are never written while the game runs (many games rewrite them on exit).
       const running = plan.file_writes.length > 0 && window.SteamUIStore?.MainRunningAppID === selected;
       showModal(
@@ -205,10 +210,11 @@ function Content() {
           strTitle={`Apply ${api.PROFILES.find((p) => p.id === profile)?.label}?`}
           strDescription={describe(plan, running)}
           bOKDisabled={plan.blocked || running}
+          onCancel={() => setCapTick(capTick + 1)}
           onOK={async () => {
             try {
               // Re-read: the user may have edited launch options while the dialog was open.
-              const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected));
+              const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected), cap);
               if (!result.applied) {
                 reportError(result.warnings.join(" "));
                 return;
@@ -277,6 +283,16 @@ function Content() {
             rgOptions={api.PROFILES.map((p) => ({ data: p.id, label: p.label }))}
             selectedOption={current} onChange={(o) => pick(o.data)} />
         </PanelSectionRow>
+        {/* Off: cap with Steam's own limiter in the QAM, changeable without leaving the game.
+            Switching re-applies the current profile (confirmed like any apply; cancel keeps it). */}
+        {currentCap && (
+          <PanelSectionRow>
+            <ToggleField key={capTick} label={`Apply the profile's ${currentCap} FPS cap`} checked={fpsCap}
+              disabled={busy}
+              description="On: keep Steam's frame limit off. Off: set it in the Quick Access Menu."
+              onChange={(on) => pick(current, on)} />
+          </PanelSectionRow>
+        )}
         {status && (
           <PanelSectionRow>
             <Notice color={status.ok ? GREEN : AMBER}>
@@ -289,7 +305,8 @@ function Content() {
         <PanelSectionRow>
           <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
             selectedOption={settings.device}
-            onChange={(o) => api.saveSettings(o.data).then(setSettings, reportError)} />
+            onChange={(o) => api.saveSettings(o.data)
+              .then(async (s) => { setSettings(s); setBoot(await api.getBootstrap()); }, reportError)} />
         </PanelSectionRow>
       </PanelSection>
     </>

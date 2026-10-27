@@ -15,7 +15,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `textfile.py` decode/encode config files (UTF-8 or UTF-16, with or without BOM; ELDEN RING
     writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
   - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
-  - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused
+  - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused.
+    Keys before any header are `[]Key` and `--` lines are comments (CryEngine's `game.cfg`)
   - `jsoncfg.py` JSON read/set by `/member/array[field=value]/...` path, same byte-preserving
     approach; the value keeps its JSON type; ambiguous paths, null, objects and arrays refused
   - `files.py` per-key file plan (read-only) + all-or-nothing apply with rollback; keys Loadout
@@ -28,14 +29,21 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `store.py` `atomic_write` + JSON files (settings = intent, state = backups)
   - `data/devices/*.json` bundled device tables (`generic.json` is required)
   - `data/games/<appid>.json` bundled per-game data (device-independent)
+- `scripts/capture.py` - contributor tool, run on the device with the system `python3` (Decky never
+  loads it, so the stdlib limit below doesn't apply; it ships in the zip under `scripts/`).
+  Snapshots the prefix and install dir, finds the keys that changed with the core parsers and
+  prints a draft entry (`options` + per-snapshot `set`). It shows what a game writes, not what it reads.
 - `src/api.ts` typed `callable()` wrappers + Steam launch-option access. `src/index.tsx` UI.
   The QAM panel remounts (e.g. when a dropdown menu opens), which wipes `useState`: keep UI state
-  in `useKept` (module-level store in `index.tsx`), never plain `useState`. Dropdowns use
+  in `useKept` (module-level store in `index.tsx`), never plain `useState`. Every hook (`useKept` included) goes
+  before `Content`'s early returns (Loading/Setup): one placed after them crashed the panel (React #310). Dropdowns use
   `layout="below"` so long values aren't cut off. Keep dropdowns short: every filter caps its list
   to the 50 most recently played (`LIST_LIMIT`) and offers a search past that; a D-pad can't scroll
   hundreds of items, and the verified list will grow too.
   Text the user must read goes on a focusable item (e.g. a dropdown's `description`): the QAM
   only scrolls to focusable items, so a text row below the last one gets cut off.
+  The FPS cap switch is per game (`settings.games[appid].fps_cap`, default on); `get_bootstrap`
+  returns each profile's cap for the configured device (`fps_limits`) for its label.
   Report every outcome with `report()` / `reportError()`: they write the in-panel status line and
   toast. Never rely on a toast alone (Steam can play its sound without showing it with the QAM open).
 
@@ -44,6 +52,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
     pnpm run typecheck                 # tsc --noEmit
     .venv/bin/python -m pytest -q      # backend tests
     scripts/package.sh                 # out/Loadout.zip (release: push a vX.Y.Z tag)
+    python3 scripts/capture.py <appid> # on the device: snapshot/diff of a game's config -> draft entry
 
 ## Security rules (non-negotiable)
 - Validate data structurally and semantically before use. Unknown fields are rejected.
@@ -93,6 +102,17 @@ on a game also overrides the QAM performance overlay (ValveSoftware/gamescope#18
 - Which keys a game reads from its config file: some games overwrite part of it from their save on
   launch (Hogwarts Legacy: upscaler and resolution in `[/Script/Phoenix.PhoenixGameSettings]`, likely
   the whole section, from `SavedUserOptions.sav`; `[ScalabilityGroups]` sticks). Check the file after launching.
+- Crysis 3 Remastered reads `game.cfg` on launch (seen on device: `sys_spec_Shadows` edited to 1
+  showed Low, System Spec Custom, value kept), except `r_AntialiasingMode` and `sys_spec_raytracing`:
+  after Loadout wrote 1/1, launching put back the previous 0/4, likely from the encrypted
+  `Profiles/default/attributes.xml`. The entry leaves both out. `r_vSync`, `r_TexMax/MinAnisotropy`
+  and `r_MotionBlurShutterSpeed` stick (file unchanged after launch, VSync and 16x shown in the menu),
+  but the menu then shows the previous motion blur amount (Low) while the file keeps 0 (Disabled):
+  assumed display-only, not confirmed visually.
+- FPS cap env per Proton: Proton 11.0's DXVK has no `DXVK_FRAME_RATE` string in `dxgi.dll`/`d3d11.dll`
+  (checked on device; Crysis 3, D3D11, ran 70+ under a 30 cap with the DXVK HUD showing), so the
+  cap also sets `DXVK_CONFIG=dxgi.maxFrameRate=N;d3d9.maxFrameRate=N`. Its `d3d12core.dll` still
+  reads `VKD3D_FRAME_RATE`. Since which Proton `DXVK_FRAME_RATE` stopped working: unknown.
 - Which field a JSON game reads: Cyberpunk reads `index` for fixed lists (seen on device: `value`
   alone was ignored) and `value` for dynamic ones (FSR2, QuickPresets). The entry sets both for
   fixed lists; `test_bundled_cyberpunk_sets_index_with_every_list_value` keeps them in sync.

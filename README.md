@@ -31,7 +31,7 @@ should work too.
 - Applies a profile by writing a managed block to the game's launch options, e.g.
 
   ```
-  LOADOUT_BEGIN=1 DXVK_FRAME_RATE=40 VKD3D_FRAME_RATE=40 LOADOUT_END=1 %command% -novid
+  LOADOUT_BEGIN=1 DXVK_FRAME_RATE=40 DXVK_CONFIG='dxgi.maxFrameRate=40;d3d9.maxFrameRate=40' VKD3D_FRAME_RATE=40 LOADOUT_END=1 %command% -novid
   ```
 
   Game arguments from an entry go right after `%command%` and are recorded in the block
@@ -39,6 +39,11 @@ should work too.
 
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
+- Each game has an **Apply the profile's N FPS cap** switch (on by default; shown for Quality,
+  Balanced and Performance with the cap from your device's table). Off, the profile only changes
+  the game's settings and you set the frame limit in Steam's Quick Access Menu, which you can
+  change without leaving the game. Flipping it re-applies the current profile (with the usual
+  confirmation).
 - Edits in-game graphics settings for games that have a data entry: XML configs (e.g. ELDEN
   RING's `GraphicsConfig.xml` in the Proton prefix), INI configs (e.g. Lies of P's Unreal
   Engine `GameUserSettings.ini` in the install folder) and JSON configs (e.g. Cyberpunk 2077's
@@ -100,7 +105,7 @@ on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry.
 
 ### Supported games
 
-ELDEN RING, Lies of P, Cyberpunk 2077 and Hogwarts Legacy have game-specific entries. What each
+ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy and Crysis 3 Remastered have game-specific entries. What each
 profile sets per game, and on which devices it was verified: [GAMES.md](GAMES.md).
 
 ### Not included
@@ -195,6 +200,7 @@ py_modules/loadout/data/   bundled device tables and per-game data
 src/                       React/TypeScript frontend (@decky/ui, @decky/api)
 tests/                     pytest suite
 scripts/package.sh         builds out/Loadout.zip
+scripts/capture.py         records which config keys a game changes (draft entry for CONTRIBUTING)
 .github/workflows/         tag-triggered release
 GAMES.md                   supported games and what each profile sets
 CONTRIBUTING.md            how to verify/add games and devices

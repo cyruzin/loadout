@@ -10,7 +10,7 @@ export const PROFILES: { id: Profile; label: string }[] = [
   { id: "uncapped", label: "Uncapped" },
 ];
 
-export interface GameSettings { profile: Profile }
+export interface GameSettings { profile: Profile; fps_cap?: boolean }
 export interface Settings {
   schema_version: number;
   device: string | null;
@@ -21,6 +21,7 @@ export interface Settings {
 }
 export interface Bootstrap {
   settings: Settings;
+  fps_limits: Record<Profile, number | null>;  // each profile's FPS cap on the configured device
   detected: string | null;
   devices: { id: string; name: string; native: string }[];
 }
@@ -44,8 +45,10 @@ export const getBootstrap = callable<[], Bootstrap>("get_bootstrap");
 export const listGames = callable<[], Game[]>("list_games");
 export const saveSettings = callable<[device: string], Settings>("save_settings");
 export const setGameFilter = callable<[filter: GameFilter], Settings>("set_game_filter");
-export const planProfile = callable<[appid: number, profile: Profile, current: string], Plan>("plan_profile");
-export const applyProfile = callable<[appid: number, profile: Profile, current: string], ApplyResult>("apply_profile");
+export const planProfile =
+  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean], Plan>("plan_profile");
+export const applyProfile =
+  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean], ApplyResult>("apply_profile");
 
 // Steam client internals (not a public contract): read/write a game's launch options.
 export function getLaunchOptions(appid: number): Promise<string> {

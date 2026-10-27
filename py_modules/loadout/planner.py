@@ -34,14 +34,19 @@ class Plan(NamedTuple):
         return {**self._asdict(), "changes": [c._asdict() for c in self.changes]}
 
 
-def profile_env(level: dict[str, Any], game_env: Optional[dict[str, str]] = None) -> dict[str, str]:
-    """Device level env, then per-game env (wins on conflict), then the FPS cap if not already set."""
+def profile_env(level: dict[str, Any], game_env: Optional[dict[str, str]] = None,
+                fps_cap: bool = True) -> dict[str, str]:
+    """Device level env, then per-game env (wins on conflict), then the FPS cap if not already set.
+    `fps_cap` False leaves the cap to the user (e.g. Steam's own limiter in the Quick Access Menu)."""
     env = {**level.get("env", {}), **(game_env or {})}
-    fps = level.get("fps_limit")
+    fps = level.get("fps_limit") if fps_cap else None
     if fps:
         # FPS cap via DXVK/VKD3D limiters (D3D games under Proton). A gamescope-level
-        # cap needs Steam internals that aren't a public API yet.
+        # cap needs Steam internals that aren't a public API yet. Proton 11's DXVK no longer reads
+        # DXVK_FRAME_RATE (not in its dxgi.dll/d3d11.dll), only DXVK_CONFIG's maxFrameRate;
+        # DXVK_FRAME_RATE stays for older Protons.
         env.setdefault("DXVK_FRAME_RATE", str(fps))
+        env.setdefault("DXVK_CONFIG", f"dxgi.maxFrameRate={fps};d3d9.maxFrameRate={fps}")
         env.setdefault("VKD3D_FRAME_RATE", str(fps))
     return env
 
@@ -49,7 +54,7 @@ def profile_env(level: dict[str, Any], game_env: Optional[dict[str, str]] = None
 def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str, Any]],
                level: dict[str, Any], approximate: bool,
                game_env: Optional[dict[str, str]] = None, file_plan: Optional[FilePlan] = None,
-               game_args: tuple[str, ...] = ()) -> Plan:
+               game_args: tuple[str, ...] = (), fps_cap: bool = True) -> Plan:
     """`entry` is this game's state ({"original", "written"}) or None if Loadout never touched it."""
     if profile not in ALL_PROFILES:
         raise ValueError(f"unknown profile: {profile!r}")
@@ -57,7 +62,7 @@ def build_plan(appid: int, profile: str, current: str, entry: Optional[dict[str,
     # Always start from the original: switching Performance -> Quality never stacks (I5).
     base, warning = launch.restore(current, entry.get("written"), entry.get("original"))
     warnings = [warning] if warning else []
-    env = {} if profile == "default" else profile_env(level, game_env)
+    env = {} if profile == "default" else profile_env(level, game_env, fps_cap)
     args = () if profile == "default" else tuple(game_args)
     new = base if warning else launch.build(base, env, args)
     if approximate and profile != "default":

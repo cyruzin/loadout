@@ -9,6 +9,7 @@ import decky  # noqa: E402
 from loadout import devices, files, games, planner, steam  # noqa: E402
 from loadout.store import JsonStore  # noqa: E402
 from loadout.games import GAME_FILTERS  # noqa: E402
+from loadout.validate import PROFILES  # noqa: E402
 
 # Intent only (forward-compatible, later the export format). Backups live in STATE.
 SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
@@ -32,27 +33,35 @@ def _ctx(appid):
     return steam.app_paths(root, appid) if root else None
 
 
-def _plan(appid, profile, current):
+def _level(device, profile):
+    dev = DEVICES.get(device or "") or DEVICES[devices.GENERIC]
+    return devices.resolve_level(DEVICES, device, profile, devices.native_class(dev))
+
+
+def _plan(appid, profile, current, fps_cap):
     key = _check_appid(appid)
     if not isinstance(current, str) or len(current) > 4096:
         raise ValueError("invalid launch options")
-    s = SETTINGS.load()
-    dev = DEVICES.get(s["device"] or "") or DEVICES[devices.GENERIC]
-    level, approx = devices.resolve_level(DEVICES, s["device"], profile, devices.native_class(dev))
+    if type(fps_cap) is not bool:
+        raise ValueError("invalid fps_cap")
+    level, approx = _level(SETTINGS.load()["device"], profile)
     spec = GAMES.get(appid, {}).get("profiles", {}).get(profile, {})
     entry = STATE.load()["games"].get(key)
     # Keys Loadout wrote before (e.g. a resolution from 0.3.0) and the new profile doesn't set
     # are restored to their originals here.
     file_plan = files.plan_files(spec.get("files", []), _ctx(appid), (entry or {}).get("files", {}))
     return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan,
-                              tuple(spec.get("args", ())))
+                              tuple(spec.get("args", ())), fps_cap)
 
 
 class Plugin:
     async def get_bootstrap(self):
         detected = devices.detect(DEVICES, devices.read_dmi())
+        s = SETTINGS.load()
         return {
-            "settings": SETTINGS.load(),
+            "settings": s,
+            # Each profile's FPS cap on the configured device, for the cap switch's label.
+            "fps_limits": {p: _level(s["device"], p)[0].get("fps_limit") for p in PROFILES},
             "detected": detected,
             "devices": [{"id": d["device"], "name": d["name"], "native": devices.native_class(d)}
                         for d in DEVICES.values()],
@@ -79,12 +88,12 @@ class Plugin:
         SETTINGS.save(s)
         return s
 
-    async def plan_profile(self, appid, profile, current):
-        return _plan(appid, profile, current).to_dict()
+    async def plan_profile(self, appid, profile, current, fps_cap=True):
+        return _plan(appid, profile, current, fps_cap).to_dict()
 
-    async def apply_profile(self, appid, profile, current):
+    async def apply_profile(self, appid, profile, current, fps_cap=True):
         """Records state and returns the launch options the frontend must write."""
-        plan = _plan(appid, profile, current)
+        plan = _plan(appid, profile, current, fps_cap)
         key = str(appid)
         if plan.blocked:
             return {"launch_options": current, "warnings": list(plan.warnings), "applied": False}
@@ -97,7 +106,7 @@ class Plugin:
                                    "files": plan.file_state}
         STATE.save(state)
         s = SETTINGS.load()
-        s["games"].setdefault(key, {"profile": "default"})["profile"] = profile
+        s["games"].setdefault(key, {"profile": "default"}).update(profile=profile, fps_cap=fps_cap)
         s["last_game"] = appid
         SETTINGS.save(s)
         decky.logger.info(f"applied {profile} to {appid}")

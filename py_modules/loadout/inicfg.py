@@ -2,7 +2,9 @@
 
 Keys are written "[Section]Key" because both parts can contain dots and slashes
 ("[/Script/ProjectP.LGameUserSettings]FSR3Mode", "[ScalabilityGroups]sg.ShadowQuality").
-Only the value after "=" changes; every other byte (encoding, CRLF, comments, order) is kept.
+Keys before any section header are written "[]Key": CryEngine's game.cfg (Crysis 3 Remastered)
+has no sections and "--" comments. Only the value after "=" changes; every other byte (encoding,
+CRLF, comments, order) is kept.
 """
 from __future__ import annotations
 
@@ -10,7 +12,8 @@ import re
 
 from .textfile import VALUE, decode, encode
 
-KEY = re.compile(r"^\[([A-Za-z0-9_./ -]{1,100})\]([A-Za-z0-9_.]{1,64})$")
+KEY = re.compile(r"^\[([A-Za-z0-9_./ -]{0,100})\]([A-Za-z0-9_.]{1,64})$")
+COMMENTS = (";", "#", "--")
 _LINE = re.compile(r"^(?P<key>[^=;#\[\s][^=]*?)(?P<sep>\s*=\s*)(?P<value>[^\r\n]*?)(?P<end>[ \t]*\r?\n?)$")
 
 
@@ -19,7 +22,7 @@ def _lines(raw: bytes) -> tuple[list[str], str]:
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
         s = line.strip()
-        if not s or s[0] in ";#" or (s.startswith("[") and s.endswith("]")) or _LINE.match(line):
+        if not s or s.startswith(COMMENTS) or (s.startswith("[") and s.endswith("]")) or _LINE.match(line):
             continue
         raise ValueError(f"malformed INI: line {i + 1}")
     return lines, codec
@@ -31,14 +34,14 @@ def _find(lines: list[str], key: str) -> tuple[int, re.Match[str]]:
     if k is None:
         raise ValueError(f"invalid key: {key!r}")
     section, name = k.groups()
-    current = None
+    current = ""  # keys before the first header
     hits = []
     for i, line in enumerate(lines):
         s = line.strip()
         if s.startswith("[") and s.endswith("]"):
             current = s[1:-1]
             continue
-        m = _LINE.match(line)
+        m = None if s.startswith(COMMENTS) else _LINE.match(line)
         if m and current == section and m.group("key") == name:
             hits.append((i, m))
     if len(hits) != 1:
