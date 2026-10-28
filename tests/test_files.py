@@ -340,12 +340,50 @@ def test_ini_keys_are_scoped_to_their_section():
 
 @pytest.mark.parametrize("key", [
     "[/Script/Game.Settings]Steps",  # duplicated (UE repeats benchmark keys)
-    "[ScalabilityGroups]sg.Missing", "[Nope]sg.ShadowQuality",
     "sg.ShadowQuality", "[ScalabilityGroups]a=b", "[A]]x",
 ])
 def test_ini_key_errors(key):
     with pytest.raises(ValueError):
         inicfg.read_values(INI, [key])
+
+
+def test_ini_absent_key_reads_none():
+    assert inicfg.read_values(INI, ["[ScalabilityGroups]sg.Missing", "[Nope]sg.ShadowQuality"]) == {
+        "[ScalabilityGroups]sg.Missing": None, "[Nope]sg.ShadowQuality": None}
+
+
+def test_ini_none_removes_the_line_and_adding_it_back_restores_the_bytes():
+    out = inicfg.set_values(INI, {"[ScalabilityGroups]sg.ShadowQuality": None})
+    assert out == INI.replace(b"sg.ShadowQuality=1\r\n", b"")
+    assert inicfg.read_values(out, ["[ScalabilityGroups]sg.ShadowQuality"]) == {
+        "[ScalabilityGroups]sg.ShadowQuality": None}
+    # Added after the section's last line (blank lines stay after it), with the file's CRLF.
+    back = inicfg.set_values(out, {"[ScalabilityGroups]sg.ShadowQuality": "1"})
+    assert back == INI.replace(b"sg.ShadowQuality=1\r\nsg.TextureQuality = 2  \r\n",
+                               b"sg.TextureQuality = 2  \r\nsg.ShadowQuality=1\r\n")
+    assert inicfg.set_values(INI, {"[ScalabilityGroups]sg.Missing": None}) == INI  # absent stays absent
+
+
+def test_ini_adds_to_the_last_section_without_a_final_newline():
+    out = inicfg.set_values(b"[A]\nx=1\n[B]\ny=2", {"[B]z": "3", "[A]w": "4"})
+    assert out == b"[A]\nx=1\nw=4\n[B]\ny=2\nz=3\n"
+
+
+def test_ini_adds_sectionless_keys_before_the_first_header():
+    assert inicfg.set_values(b"[S]\r\nb=2\r\n", {"[]a": "1"}) == b"a=1\r\n[S]\r\nb=2\r\n"
+    assert inicfg.set_values(b"-- c\r\na = 1\r\n", {"[]b": "2"}) == b"-- c\r\na = 1\r\nb=2\r\n"
+
+
+@pytest.mark.parametrize("values", [
+    {"[Nope]a": "1"},  # a new section is refused
+    {"[ScalabilityGroups]sg.New": "1\r\n[Injected]"},
+    {"[ScalabilityGroups]sg.New": "x;y"},
+    {"[ScalabilityGroups]sg.New=1\r\nX": "1"},
+    {"[/Script/Game.Settings]Steps": None},  # duplicated: neither set nor removed
+])
+def test_ini_add_and_remove_refusals(values):
+    with pytest.raises(ValueError):
+        inicfg.set_values(INI, values)
 
 
 @pytest.mark.parametrize("raw", [b"[S]\r\nnot a key value line\r\n", b"[S]\r\n=novalue\r\n", b"\xff\xfe\xff"])
@@ -385,19 +423,20 @@ def test_ini_keys_before_any_section_and_dash_comments():
     assert out == CRYSIS.replace(b"sys_spec_Shadows = 3", b"sys_spec_Shadows = 1")
 
 
-@pytest.mark.parametrize("key", ["[]-- [Game-Configuration]", "[]--x", "[Game-Configuration]r_vSync",
-                                 "[]sys_spec_Missing"])
+@pytest.mark.parametrize("key", ["[]-- [Game-Configuration]", "[]--x"])
 def test_ini_dash_comment_lines_are_never_keys(key):
     raw = CRYSIS + b"--x = 1\r\n"
     with pytest.raises(ValueError):
         inicfg.read_values(raw, [key])
+    # A "-- [Header]" comment is no section either.
+    assert inicfg.read_values(raw, ["[Game-Configuration]r_vSync"]) == {"[Game-Configuration]r_vSync": None}
+    with pytest.raises(ValueError):
+        inicfg.set_values(raw, {"[Game-Configuration]r_vSync": "0"})
 
 
 def test_ini_keys_after_a_header_are_not_sectionless():
     raw = b"a = 1\r\n[S]\r\nb = 2\r\n"
-    assert inicfg.read_values(raw, ["[]a", "[S]b"]) == {"[]a": "1", "[S]b": "2"}
-    with pytest.raises(ValueError):
-        inicfg.read_values(raw, ["[]b"])
+    assert inicfg.read_values(raw, ["[]a", "[S]b", "[]b"]) == {"[]a": "1", "[S]b": "2", "[]b": None}
 
 
 # Lies of P's GameUserSettings.ini as found on a device (ASCII, CRLF, lives in the install dir).
@@ -837,3 +876,58 @@ def test_xdg_data_symlink_out_is_refused(tmp_path):
 def test_xdg_data_path_needs_the_token_in_context(tmp_path):
     plan = files.plan_files([{"path": BG3_PATH, "format": "lsx", "set": {"A": "1"}}], ctx_for(tmp_path), {})
     assert plan.error and "Unsafe" in plan.error
+
+
+# The Witcher 3's dx12user.settings, copied from a device with the Medium preset (no BOM, CRLF). Each
+# preset writes its own set of [Rendering] keys: switching adds and removes lines.
+WITCHER3 = (Path(__file__).parent / "data/witcher3_dx12user_medium.settings").read_bytes()
+
+
+def _ini_values(raw):
+    return dict(line.split("=", 1) for line in raw.decode().splitlines() if "=" in line and not line.startswith("["))
+
+
+def test_witcher3_profiles_add_and_remove_keys_and_default_restores_them(tmp_path):
+    from loadout import games
+    assert WITCHER3[:4] == b"[Ren" and b"\r\n" in WITCHER3 and WITCHER3.count(b"\n") == WITCHER3.count(b"\r\n")
+    profiles = games.load_games()[292030]["devices"]["rog-xbox-ally"]["profiles"]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/Documents/The Witcher 3/dx12user.settings"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(WITCHER3)
+    keys = list(profiles["quality"]["files"][0]["set"])
+
+    state = {}
+    for name in ("quality", "balanced", "quality"):  # switching profiles, no Default in between
+        spec = profiles[name]["files"]
+        plan = apply(spec, ctx, state)
+        state = {str(cfg): plan.state[str(cfg)]}
+        assert inicfg.read_values(cfg.read_bytes(), keys) == spec[0]["set"]
+        assert cfg.read_bytes().count(b"\n") == cfg.read_bytes().count(b"\r\n")  # still CRLF only
+    # From the Medium file, textures High drops TextureDownscale and adds TextureMipBias (as the game does).
+    from_original = {(k, v["old"], v["new"]) for k, v in state[str(cfg)].items()}
+    assert ("[Rendering]TextureDownscale", "1", None) in from_original
+    assert ("[Rendering]TextureMipBias", None, "-0.4") in from_original
+
+    apply([], ctx, state)  # Default
+    assert _ini_values(cfg.read_bytes()) == _ini_values(WITCHER3)
+    assert sorted(cfg.read_bytes().splitlines()) == sorted(WITCHER3.splitlines())
+
+
+def test_witcher3_profiles_are_kestononline_with_xess_and_no_performance():
+    from loadout import games
+    for dev, block in games.load_games()[292030]["devices"].items():
+        assert set(block["profiles"]) == {"quality", "balanced"}, dev  # 60 isn't reachable on these
+        for name, p in block["profiles"].items():
+            s = p["files"][0]["set"]
+            assert s["[Rendering/RT]EnableRT"] == "false" and s["[PostProcess]AAMode"] == "7", (dev, name)
+            assert s["[PostProcess]XESSQuality"] == {"quality": "1", "balanced": "4"}[name]  # Native AA / Quality
+            # Detail Level: High for 30, Medium for 40 (less CPU).
+            assert (s["[LevelOfDetail]DecalsHideDistance"], s["[Rendering]MeshLODDistanceScale"]) == {
+                "quality": ("40", "1.2"), "balanced": ("30", "1")}[name]
+            assert s["[Viewport]VSync"] == "false" and s["[Engine]LimitFPS"] == "0"  # Steam's QAM limits
+            # Keys whose section the game drops with them are left out: inicfg can't add a section.
+            assert not any(k.startswith(("[Rendering/DRS]", "[Streaming/Textures]")) for k in s)
+            assert p["args"] == ["--launcher-skip"]
+            # Steam sets SteamDeck=1 only on a Deck (not seen on a ROG Xbox Ally); 0 unlocks the menu there.
+            assert p["env"] == ({"SteamDeck": "0"} if dev.startswith("steam-deck") else {}), (dev, name)

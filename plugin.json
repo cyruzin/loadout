@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["performance", "profiles"],
-    "description": "One-click per-game Quality, Balanced, Performance and Uncapped profiles, with a Default (original) state.",
+    "description": "One-click per-game Quality, Balanced and Performance profiles, with a Default (original) state.",
     "image": ""
   }
 }

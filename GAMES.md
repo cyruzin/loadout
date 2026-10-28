@@ -22,6 +22,7 @@ its config file, the entry leaves it out and you set it in the menu (see Hogwart
 | Hogwarts Legacy (990080) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Medium (shading High; volumetrics, population Low) | everything Low | everything Low |
 | Crysis 3 Remastered (2096610) | Steam Deck LCD/OLED, ROG Xbox Ally | High, textures High | Medium, textures High | Low, textures High |
 | Baldur's Gate 3 (1086940) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Low, textures Medium, FSR 2.2 Quality | — | — |
+| The Witcher 3: Wild Hunt (292030) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Medium, textures/detail High, water Low, XeSS Native AA | the same with XeSS Quality and detail Medium | — |
 
 ### Recommended resolution
 
@@ -37,6 +38,7 @@ than 720p, and Crysis 3's levels come from Deck reports at that resolution.
 | Hogwarts Legacy | 1280×720 | 1280×800 |
 | Crysis 3 Remastered | 1280×720 | 1280×800 |
 | Baldur's Gate 3 | 1280×720 | 1280×800 |
+| The Witcher 3 | 1280×720 | 1280×800 |
 
 ## Notes per game
 
@@ -84,6 +86,21 @@ Ally: after applying Quality the menu shows these values and the preset as Custo
 every key back. The preset name (`CurrentSettings`) isn't set by the profile: while playing with
 Quality the game drops it, so after Default the menu may show Custom with your original values. If you force Proton, the file is in the prefix and the
 entry doesn't reach it.
+
+**The Witcher 3: Wild Hunt.** DX12 (the only renderer its launcher offers now). Settings live in
+`Documents/The Witcher 3/dx12user.settings` in the prefix, which the game reads on launch. Quality
+follows a Steam Deck 30 FPS setup from r/SteamDeck ("Witcher 3 Remastered Settings", top comment):
+XeSS Native AA (no upscaling), sharpening off, GTAO High, reflections Low, background characters,
+shadows, terrain, foliage and grass Medium, screen space shadows on, water Low, textures and detail
+High. Balanced is the same with XeSS Quality, as that comment suggests for a higher frame rate,
+and detail Medium (less CPU, to stay at 40).
+No Performance: 60 isn't expected on these handhelds. Both profiles turn ray tracing, HairWorks,
+VSync and the game's own frame limit (Maximum Frames Per Second: Unlimited) off. Dynamic resolution
+is left alone (the menu disables it with XeSS); blur, bloom, depth of field, motion blur and the other
+effects are left as you set them. All profiles launch with `--launcher-skip`. On the Steam Decks they
+also set `SteamDeck=0`, as ProtonDB reports do: with Steam's `SteamDeck=1` the game locks its
+graphics settings (not tested on a Deck). The ROG Xbox Ally doesn't need it: Steam doesn't set
+`SteamDeck` there. Not yet measured: whether each profile holds its target FPS.
 
 ## Adding or verifying a game
 

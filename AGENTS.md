@@ -17,7 +17,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
     writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
   - `xmlcfg.py` flat XML read/set that preserves every other byte (own well-formedness check)
   - `inicfg.py` INI read/set by `[Section]Key`, same byte-preserving approach; duplicated keys refused.
-    Keys before any header are `[]Key` and `--` lines are comments (CryEngine's `game.cfg`)
+    Keys before any header are `[]Key` and `--` lines are comments (CryEngine's `game.cfg`).
+    A key can be absent (The Witcher 3 omits keys at their default, per preset): read gives None,
+    `null` in data removes the line, a missing key is added at the end of its (existing) section
   - `jsoncfg.py` JSON read/set by `/member/array[field=value]/...` path, same byte-preserving
     approach; the value keeps its JSON type; ambiguous paths, null, objects and arrays refused
   - `lsxcfg.py` Larian `.lsx` (BG3's `graphicSettings.lsx`) read/set by `MapKey`, same approach.
@@ -77,7 +79,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 ## Security rules (non-negotiable)
 - Validate data structurally and semantically before use. Unknown fields are rejected.
 - Never use str.format, eval, exec, pickle, yaml.load or shell=True with data.
-- Env vars: allowlist prefixes + denylist; values quoted with shlex.quote in launch options.
+- Env vars: allowlist prefixes + denylist (plus exact names in `ENV_EXACT`, e.g. `SteamDeck`); values quoted with shlex.quote in launch options.
   Game args: plain flags only (`validate.ARG`: no values, spaces or shell characters).
 - Writes are atomic (temp file + os.replace), all-or-nothing, never while the game runs.
   Backups are per key, never whole files.
@@ -147,6 +149,18 @@ RING (Proton) didn't start with it, and it overrides the QAM performance overlay
 - Which field a JSON game reads: Cyberpunk reads `index` for fixed lists (seen on device: `value`
   alone was ignored) and `value` for dynamic ones (FSR2, QuickPresets). The entry sets both for
   fixed lists; `test_bundled_cyberpunk_sets_index_with_every_list_value` keeps them in sync.
+- The Witcher 3 (DX12, the only renderer its launcher offers now): reads `dx12user.settings` on
+  launch (seen on device: the Low snapshot written over a Medium file showed Low and FSR Auto in the
+  menu, and the game rewrote the same bytes). The cloud syncs only the DX11 `user.settings`. Its
+  "Steam Deck" preset wrote the same file as Low. The Deck blocks set `SteamDeck=0` (ProtonDB
+  reports: with Steam's `SteamDeck=1` the game locks its graphics settings; `ENV_EXACT` allows that
+  one mixed-case name). Not tested on a Deck. Steam didn't set `SteamDeck` at all for the game on the
+  ROG Xbox Ally (env read from the running process), so the Ally block leaves it out.
+  Every menu option was mapped to its keys on device (one change at a time). A section whose only
+  key is at its default disappears with it (`[Rendering/DRS]` with dynamic resolution off,
+  `[Streaming/Textures]` with textures Ultra+), so the entry leaves those keys out (inicfg won't add
+  a section). Ray tracing options are greyed out under Proton. Not confirmed: that every profile
+  holds its target FPS.
 
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.

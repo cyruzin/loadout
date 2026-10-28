@@ -103,6 +103,22 @@ def test_unwritable_value_and_unreadable_change_are_noted(tmp_path):
     assert any("no key Loadout can set" in n and n.endswith("b.ini") for n in notes)
 
 
+def test_ini_key_absent_in_a_snapshot_is_null(tmp_path):
+    # The Witcher 3 drops [Rendering] keys that are at their default for the chosen preset.
+    ctx, cfg = _game(tmp_path)
+    (cfg / "dx12user.settings").write_bytes(b"[Rendering]\r\nGrassDensity=1400\r\nTextureDownscale=2\r\n")
+    low = _snap(ctx)
+    (cfg / "dx12user.settings").write_bytes(b"[Rendering]\r\nGrassDensity=3500\r\nTextureMipBias=-0.4\r\n")
+    draft, notes = capture.build_draft([("low", low), ("high", _snap(ctx))], ctx)
+    path = "{prefix}/drive_c/users/steamuser/AppData/Local/G/dx12user.settings"
+    sets = {label: [f["set"] for f in files] for label, files in draft["snapshots"].items()}
+    assert sets == {
+        "low": [{"[Rendering]GrassDensity": "1400", "[Rendering]TextureDownscale": "2", "[Rendering]TextureMipBias": None}],
+        "high": [{"[Rendering]GrassDensity": "3500", "[Rendering]TextureDownscale": None, "[Rendering]TextureMipBias": "-0.4"}]}
+    assert draft["options"][path]["[Rendering]TextureDownscale"] == ["2"]
+    assert notes == []
+
+
 def test_snapshot_skips_symlinks_and_skipped_dirs(tmp_path):
     ctx, cfg = _game(tmp_path)
     outside = tmp_path / "secret.ini"

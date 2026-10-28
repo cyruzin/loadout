@@ -19,6 +19,9 @@ RESOLUTIONS = ("720p", "800p", "1080p", "1200p", "1440p", "1600p", "2160p")
 ENV_ALLOW = re.compile(r"^(DXVK_|VKD3D_|PROTON_|MANGOHUD|WINEDLLOVERRIDES$|SDL_|MESA_|RADV_)")
 ENV_DENY = {"LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "SHELL"}
 ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
+# Mixed-case names allowed one by one. SteamDeck: Steam sets SteamDeck=1 on a Deck, and some games
+# (The Witcher 3) then lock their graphics settings; =0 unlocks them.
+ENV_EXACT = {"SteamDeck"}
 DEVICE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 NATIVE = re.compile(r"^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$")
 # Game arguments after %command%: one plain flag each, e.g. "--launcher-skip".
@@ -54,7 +57,8 @@ def validate_env(env: Any) -> dict[str, str]:
     if not isinstance(env, dict) or len(env) > 16:
         raise ValidationError("env: expected object with at most 16 entries")
     for k, v in env.items():
-        if not isinstance(k, str) or not ENV_NAME.match(k) or k in ENV_DENY or not ENV_ALLOW.match(k):
+        if not isinstance(k, str) or (k not in ENV_EXACT and (not ENV_NAME.match(k) or k in ENV_DENY
+                                                              or not ENV_ALLOW.match(k))):
             raise ValidationError(f"variable not allowed: {k!r}")
         # LOADOUT_ is reserved for the launch-option markers (see launch.py).
         if not isinstance(v, str) or len(v) > 256 or any(ord(c) < 32 for c in v) or "LOADOUT_" in v:
@@ -151,8 +155,8 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
         for k, val in values.items():
             if not isinstance(k, str) or not key_re.match(k):
                 raise ValidationError(f"{w}.set: invalid {f['format']} key {k!r}")
-            # null (lsx only): remove the key, i.e. the game's default, which it doesn't write.
-            if not (val is None and f["format"] == "lsx") and (not isinstance(val, str) or not VALUE.match(val)):
+            # null (lsx, ini): remove the key, i.e. the game's default, which it doesn't write.
+            if not (val is None and f["format"] in ("lsx", "ini")) and (not isinstance(val, str) or not VALUE.match(val)):
                 raise ValidationError(f"{w}.set.{k}: invalid value")
         out.append({"path": path, "format": f["format"], "set": dict(values)})
     return out

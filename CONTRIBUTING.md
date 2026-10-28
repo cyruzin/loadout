@@ -142,6 +142,13 @@ Supported formats:
   can't be set.
   Files without sections, like CryEngine's `game.cfg` (Crysis 3 Remastered), write keys before any
   header as `[]Key`, e.g. `[]sys_spec_Shadows`; lines starting with `;`, `#` or `--` are comments.
+  Some games leave a key out while it's at its default (The Witcher 3's `dx12user.settings`: each
+  preset writes its own set of `[Rendering]` keys). `null` removes the line; a missing key is added
+  as `Key=value` at the end of its section (the section must already be in the file); Default puts
+  both back. A key absent in the preset you copy is `null` in that profile: never guess its value.
+  A section with no key left can vanish too (The Witcher 3's `[Rendering/DRS]`); a section that
+  isn't in the file is refused, so leave out keys whose section can go.
+  `capture.py` does this for you.
 
 - **JSON** (Cyberpunk 2077's `UserSettings.json`). Keys are paths of object members, each starting
   with `/`; a member holding an array of objects picks its one element whose field equals a value,
@@ -236,7 +243,8 @@ model):
   `"performance": { "resolution": "1280x720", "files": [...] }`. Loadout only shows it ("Recommended
   resolution") and never writes it.
 - **Env vars** must match the allowlist (`DXVK_`, `VKD3D_`, `PROTON_`, `MANGOHUD`,
-  `WINEDLLOVERRIDES`, `SDL_`, `MESA_`, `RADV_`).
+  `WINEDLLOVERRIDES`, `SDL_`, `MESA_`, `RADV_`), or be one of the exact names in `ENV_EXACT`
+  (`SteamDeck`: `0` on a Deck makes a game like The Witcher 3 unlock its graphics settings).
 - **Game arguments** go in `"launch": { "args": ["--launcher-skip"] }` (Cyberpunk 2077 skips its
   launcher with it). Each one is a plain flag (`-x` or `--name`, letters, digits, `_` and `-`):
   no values, spaces or shell characters. Loadout puts them right after `%command%`.

@@ -19,18 +19,20 @@ class Game(IntEnum):
     HOGWARTS_LEGACY = 990080
     CRYSIS_3 = 2096610
     BALDURS_GATE_3 = 1086940
+    WITCHER_3 = 292030
 
 # --- env -------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("name", ["DXVK_ASYNC", "VKD3D_FRAME_RATE", "PROTON_NO_ESYNC", "MANGOHUD",
-                                  "WINEDLLOVERRIDES", "RADV_PERFTEST"])
+                                  "WINEDLLOVERRIDES", "RADV_PERFTEST", "SteamDeck"])
 def test_env_allowlisted(name):
     assert validate_env({name: "1"}) == {name: "1"}
 
 
 @pytest.mark.parametrize("name", ["LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "SHELL",
-                                  "dxvk_async", "DXVK-ASYNC", "FOO", "WINEDLLOVERRIDES_X", ""])
+                                  "dxvk_async", "DXVK-ASYNC", "FOO", "WINEDLLOVERRIDES_X", "",
+                                  "STEAMDECK", "steamdeck", "SteamDeck_X", "SteamDeckX", "SteamOS", " SteamDeck"])
 def test_env_rejected_names(name):
     with pytest.raises(ValidationError):
         validate_env({name: "1"})
@@ -196,7 +198,8 @@ def _xml(path, fmt="xml", values=None):
 @pytest.mark.parametrize("spec", [
     {"path": "{xdg_data}/L/graphicSettings.xml", "format": "lsx", "set": {"A": "1"}},  # lsx needs .lsx
     {"path": "{xdg_data}/L/graphicSettings.lsx", "format": "xml", "set": {"A": "1"}},  # .lsx needs lsx
-    {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]A": None}},  # null is lsx only
+    {"path": "{install_dir}/G.json", "format": "json", "set": {"/a": None}},  # null is lsx/ini only
+    {"path": "{install_dir}/G.xml", "format": "xml", "set": {"A": None}},
     {"path": "{xdg_data}/L/g.lsx", "format": "lsx", "set": {"A": 1}},
     {"path": "{home}/L/g.lsx", "format": "lsx", "set": {"A": "1"}},
     {"path": "{xdg_data}/../g.lsx", "format": "lsx", "set": {"A": "1"}},
@@ -212,7 +215,12 @@ def test_lsx_file_spec_accepts_xdg_data_and_null():
     assert validate_files([spec], "files") == [spec]
 
 
-TESTED = "rog-xbox-ally"  # the device the bundled entries were tested on
+def test_ini_file_spec_accepts_null():
+    spec = {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]A": None, "[S]B": "1"}}
+    assert validate_files([spec], "files") == [spec]
+
+
+TESTED ="rog-xbox-ally"  # the device the bundled entries were tested on
 
 
 def _profiles(appid):
@@ -518,7 +526,9 @@ def test_bundled_games_load():
     for game in Game:
         devs = games.load_games()[game]["devices"]
         assert set(devs) <= real, game
-        settings = lambda d: {p: {**b, "resolution": None} for p, b in devs[d]["profiles"].items()}
+        # SteamDeck=0 only matters on a Deck (Steam sets SteamDeck=1 there), so only Decks set it.
+        settings = lambda d: {p: {**b, "resolution": None, "env": {k: v for k, v in b["env"].items() if k != "SteamDeck"}}
+                              for p, b in devs[d]["profiles"].items()}
         assert all(settings(d) == settings(TESTED) for d in deck_class), game
         # Recommended resolution: tested at 720p on the Ally (Lies of P Quality/Balanced at 1080p);
         # the Decks' native 1280x800 (about 11% more pixels than 720p).

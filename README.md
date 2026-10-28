@@ -33,7 +33,8 @@ should work too.
   folder), JSON configs (e.g. Cyberpunk 2077's `UserSettings.json`) and Larian's LSX configs
   (Baldur's Gate 3's native `graphicSettings.lsx` in `~/.local/share`; never elsewhere in your home,
   never Steam's own folder). Only the listed keys
-  change, each original value is backed up, writes are atomic and all-or-nothing, and nothing is
+  change (a key some games leave out at its default, like The Witcher 3's, is added or removed as
+  the game itself does), each original value is backed up, writes are atomic and all-or-nothing, and nothing is
   written while the game runs (the confirmation asks you to close it). Default puts every key back
   unless the game changed it since.
 - Profiles are per device, so each device's graphics can be tuned on its own. When a game has no
@@ -101,8 +102,8 @@ Values live in `py_modules/loadout/data/devices/*.json` (`fps_limit` per profile
 
 ### Supported games
 
-ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy, Crysis 3 Remastered and Baldur's Gate 3
-(native Linux build) have game-specific entries. What each
+ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy, Crysis 3 Remastered, Baldur's Gate 3
+(native Linux build) and The Witcher 3: Wild Hunt have game-specific entries. What each
 profile sets per game, and which devices it has profiles for: [GAMES.md](GAMES.md).
 
 ### Not included

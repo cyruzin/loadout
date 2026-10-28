@@ -34,7 +34,7 @@ from loadout.textfile import VALUE, decode  # noqa: E402
 MAX_SIZE = 1 << 20  # config files are small; paks and saves are only stat'ed
 PARSERS = {"xml": xmlcfg, "json": jsoncfg, "ini": inicfg}
 FORMATS = {".xml": ["xml"], ".json": ["json"], ".ini": ["ini"], ".cfg": ["json", "xml", "ini"],
-           ".config": ["json", "xml", "ini"]}
+           ".config": ["json", "xml", "ini"], ".settings": ["ini"]}  # .settings: The Witcher 3
 LABEL = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 _XML_ELEMENT = re.compile(r"<([A-Za-z_][A-Za-z0-9_.-]{0,63})>[^<]*</\1>")
 _JSON_NAME = re.compile(r"^[A-Za-z0-9_]{1,64}$")
@@ -168,7 +168,9 @@ def build_draft(snaps: list[tuple[str, dict]], ctx: dict[str, str]) -> tuple[dic
         fmt = parsed[0][1]
         keys = sorted(set().union(*(v for _, _, v in parsed)))
         changed = [k for k in keys if len({v.get(k) for _, _, v in parsed}) > 1]
-        bad = [k for k in changed if not all(VALUE.match(v.get(k, "")) for _, _, v in parsed)]
+        # INI keys absent in a snapshot are written null (removed): games omit keys at their default.
+        absent_ok = fmt == "ini"
+        bad = [k for k in changed if not all(VALUE.match(v[k]) if k in v else absent_ok for _, _, v in parsed)]
         for k in bad:
             notes.append(f"Loadout won't write this value: {name} {k}")
         changed = [k for k in changed if k not in bad]
@@ -177,8 +179,7 @@ def build_draft(snaps: list[tuple[str, dict]], ctx: dict[str, str]) -> tuple[dic
             continue
         options[name] = {k: list(dict.fromkeys(v[k] for _, _, v in parsed if k in v)) for k in changed}
         for label, _, v in parsed:
-            rounds[label].append({"path": name, "format": fmt,
-                                  "set": {k: v[k] for k in changed if k in v}})
+            rounds[label].append({"path": name, "format": fmt, "set": {k: v.get(k) for k in changed if k in v or absent_ok}})
     for name in unsupported[:30]:
         notes.append(f"changed, not a config file Loadout reads (save, registry, cache?): {name}")
     if len(unsupported) > 30:
