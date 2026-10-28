@@ -130,6 +130,10 @@ on a game also overrides the QAM performance overlay (ValveSoftware/gamescope#18
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.
 
+## Git
+- Commit messages (written for the maintainer or committed by an agent) never carry a
+  `Co-Authored-By:` or any other attribution trailer.
+
 ## Definition of done
 Run this checklist at the end of EVERY implementation, adjustment or fix, before reporting back:
 
