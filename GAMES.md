@@ -4,17 +4,22 @@ Games with a Loadout entry in `py_modules/loadout/data/games/<appid>.json`. On t
 sets the FPS cap from the device table (see the [README](README.md#what-the-mvp-does)) **and**
 the game's graphics settings. Any other game gets the FPS cap only.
 
+Profiles are per device. Every game below has the same profiles for the Steam Deck LCD, Steam Deck
+OLED and ROG Xbox Ally, tested on a ROG Xbox Ally at 15 W (a chip close to the Steam Deck's). On
+any other device, pick one of those under **Use profiles from**, or add a block for your device
+([CONTRIBUTING.md](CONTRIBUTING.md)).
+
 Profiles never set the game's resolution: pick it in the game's menu (or Steam's game
 resolution setting) for your device and whether you're docked. Where a game ignores a setting in
 its config file, the entry leaves it out and you set it in the menu (see Hogwarts Legacy).
 
-| Game | Verified on | Quality | Balanced | Performance / Uncapped |
+| Game | Profiles for | Quality | Balanced | Performance / Uncapped |
 |---|---|---|---|---|
-| ELDEN RING (1245620) | all bundled devices (tested on ROG Xbox Ally) | tuned graphics (high textures/AA, low shadows, motion blur off) | device cap only | every graphics option at its lowest |
-| Lies of P (1627720) | all bundled devices (tested on ROG Xbox Ally) | everything Medium | Medium; shading, shadows, reflections, fog, AO Low | everything Low |
-| Cyberpunk 2077 (1091500) | all bundled devices (tested on ROG Xbox Ally) | the game's "Steam Deck" preset with FSR 2 Quality | the game's "Steam Deck" preset (FSR 2 Balanced) | everything Low/Off, FSR 2 Performance |
-| Hogwarts Legacy (990080) | all bundled devices (untested) | mostly Medium (shading High; volumetrics, population Low) | everything Low | everything Low |
-| Crysis 3 Remastered (2096610) | all bundled devices (tested on ROG Xbox Ally) | High, textures High | Medium, textures High | Low, textures High |
+| ELDEN RING (1245620) | Steam Deck LCD/OLED, ROG Xbox Ally | tuned graphics (high textures/AA, low shadows, motion blur off) | device cap only | every graphics option at its lowest |
+| Lies of P (1627720) | Steam Deck LCD/OLED, ROG Xbox Ally | everything Medium | Medium; shading, shadows, reflections, fog, AO Low | everything Low |
+| Cyberpunk 2077 (1091500) | Steam Deck LCD/OLED, ROG Xbox Ally | the game's "Steam Deck" preset with FSR 2 Quality | the game's "Steam Deck" preset (FSR 2 Balanced) | everything Low/Off, FSR 2 Performance |
+| Hogwarts Legacy (990080) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Medium (shading High; volumetrics, population Low) | everything Low | everything Low |
+| Crysis 3 Remastered (2096610) | Steam Deck LCD/OLED, ROG Xbox Ally | High, textures High | Medium, textures High | Low, textures High |
 
 ## Notes per game
 

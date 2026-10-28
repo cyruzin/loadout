@@ -153,51 +153,63 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
     return out
 
 
+def _profiles(x: Any, options: dict[str, dict[str, list[str]]], where: str) -> dict[str, Any]:
+    profiles = _obj(x, where, set(PROFILES))
+    clean = {}
+    for profile, body in profiles.items():
+        w = f"{where}.{profile}"
+        _obj(body, w, {"launch", "files"})
+        env: dict[str, str] = {}
+        args: list[str] = []
+        if "launch" in body:
+            launch = _obj(body["launch"], f"{w}.launch", {"env", "args"})
+            env = validate_env(launch.get("env", {}))
+            args = launch.get("args", [])
+            if (not isinstance(args, list) or len(args) > 8 or len(set(args)) != len(args)
+                    or not all(isinstance(a, str) and ARG.match(a) for a in args)):
+                raise ValidationError(f"{w}.launch.args: expected up to 8 plain flags")
+        clean[profile] = {"env": env, "args": list(args), "files": validate_files(body.get("files", []), f"{w}.files")}
+        for f in clean[profile]["files"]:
+            for k, val in f["set"].items():
+                allowed = options.get(f["path"], {}).get(k)
+                if allowed is not None and val not in allowed:
+                    raise ValidationError(f"{w}: {k}={val} not in {allowed}")
+    return clean
+
+
+def _device_entry(x: Any, options: dict[str, dict[str, list[str]]], where: str) -> dict[str, Any]:
+    """One device's profiles, tested on that device (`verified`) and where they came from (`source`)."""
+    _obj(x, where, {"source", "verified", "profiles"}, {"verified", "profiles"})
+    source = None
+    if "source" in x:
+        source = _str(x["source"], f"{where}.source", 300)
+        if not source.startswith("https://"):
+            raise ValidationError(f"{where}.source: expected https URL")
+    v = _obj(x["verified"], f"{where}.verified", {"proton", "date"}, {"proton", "date"})
+    if not isinstance(v["date"], str) or not DATE.match(v["date"]):
+        raise ValidationError(f"{where}.verified.date: expected YYYY-MM-DD")
+    verified = {"proton": _str(v["proton"], f"{where}.verified.proton", 40), "date": v["date"]}
+    return {"source": source, "verified": verified, "profiles": _profiles(x["profiles"], options, f"{where}.profiles")}
+
+
 def validate_game_doc(doc: Any) -> dict[str, Any]:
-    """Device-independent per-game data.
-    Returns {appid, name, source, verified: [...], profiles: {p: {env, args, files}}}."""
-    _obj(doc, "game", {"schema_version", "appid", "name", "source", "verified", "options", "profiles"},
-         {"schema_version", "appid", "name", "profiles"})
-    if doc["schema_version"] != 1:
+    """Per-game data, profiles per device: each device's block can be tuned (or added) on its own.
+    Returns {appid, name, options, devices: {device_id: {source, verified, profiles: {p: {env, args, files}}}}}."""
+    _obj(doc, "game", {"schema_version", "appid", "name", "options", "devices"},
+         {"schema_version", "appid", "name", "devices"})
+    if doc["schema_version"] != 2:
         raise ValidationError("unsupported schema_version")
     appid = doc["appid"]
     if type(appid) is not int or not 0 < appid < 2**32:
         raise ValidationError("appid: expected positive integer")
     name = _str(doc["name"], "name", 120)
-    source = None
-    if "source" in doc:
-        source = _str(doc["source"], "source", 300)
-        if not source.startswith("https://"):
-            raise ValidationError("source: expected https URL")
-    raw = doc.get("verified", [])
-    if not isinstance(raw, list) or len(raw) > 16:
-        raise ValidationError("verified: expected list of at most 16")
-    verified = []
-    for v in raw:
-        _obj(v, "verified[]", {"proton", "device", "date"}, {"proton", "device", "date"})
-        if not isinstance(v["device"], str) or not DEVICE_ID.match(v["device"]):
-            raise ValidationError("verified.device: invalid id")
-        if not isinstance(v["date"], str) or not DATE.match(v["date"]):
-            raise ValidationError("verified.date: expected YYYY-MM-DD")
-        verified.append({"proton": _str(v["proton"], "verified.proton", 40), "device": v["device"], "date": v["date"]})
     options = validate_options(doc.get("options", {}))
-    profiles = _obj(doc["profiles"], "profiles", set(PROFILES))
+    devs = doc["devices"]
+    if not isinstance(devs, dict) or not 0 < len(devs) <= 32:
+        raise ValidationError("devices: expected object with 1..32 devices")
     clean = {}
-    for profile, body in profiles.items():
-        _obj(body, f"profiles.{profile}", {"launch", "files"})
-        env: dict[str, str] = {}
-        args: list[str] = []
-        if "launch" in body:
-            launch = _obj(body["launch"], f"profiles.{profile}.launch", {"env", "args"})
-            env = validate_env(launch.get("env", {}))
-            args = launch.get("args", [])
-            if (not isinstance(args, list) or len(args) > 8 or len(set(args)) != len(args)
-                    or not all(isinstance(a, str) and ARG.match(a) for a in args)):
-                raise ValidationError(f"profiles.{profile}.launch.args: expected up to 8 plain flags")
-        clean[profile] = {"env": env, "args": list(args), "files": validate_files(body.get("files", []), f"profiles.{profile}.files")}
-        for f in clean[profile]["files"]:
-            for k, val in f["set"].items():
-                allowed = options.get(f["path"], {}).get(k)
-                if allowed is not None and val not in allowed:
-                    raise ValidationError(f"profiles.{profile}: {k}={val} not in {allowed}")
-    return {"appid": appid, "name": name, "source": source, "verified": verified, "profiles": clean}
+    for dev_id, entry in devs.items():
+        if not isinstance(dev_id, str) or not DEVICE_ID.match(dev_id):
+            raise ValidationError(f"devices: invalid id {dev_id!r}")
+        clean[dev_id] = _device_entry(entry, options, f"devices.{dev_id}")
+    return {"appid": appid, "name": name, "options": options, "devices": clean}

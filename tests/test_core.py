@@ -199,36 +199,79 @@ def _xml(path, fmt="xml", values=None):
     return {"path": path, "format": fmt, "set": {"A": "1"} if values is None else values}
 
 
-def _game(**over):
-    doc = {"schema_version": 1, "appid": 480, "name": "Spacewar",
-           "source": "https://example.com/post",
-           "verified": [{"proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24"}],
-           "profiles": {"quality": {"launch": {"env": {"DXVK_ASYNC": "1"}}}, "uncapped": {}}}
+TESTED = "rog-xbox-ally"  # the device the bundled entries were tested on
+
+
+def _profiles(appid):
+    return games.load_games()[appid]["devices"][TESTED]["profiles"]
+
+
+def _game(profiles=None, options=None, **over):
+    """A game doc with one device block; profiles/options go into it, the rest at the top level."""
+    entry = {"source": "https://example.com/post", "verified": {"proton": "default", "date": "2026-10-24"},
+             "profiles": {"quality": {"launch": {"env": {"DXVK_ASYNC": "1"}}}, "uncapped": {}}
+             if profiles is None else profiles}
+    doc = {"schema_version": 2, "appid": 480, "name": "Spacewar", "devices": {"steam-deck-lcd": entry}}
+    if options is not None:
+        doc["options"] = options
     doc.update(over)
     return doc
 
 
 def test_game_doc_valid():
-    assert validate_game_doc(_game())["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "args": [], "files": []},
-                                                      "uncapped": {"env": {}, "args": [], "files": []}}
+    dev = validate_game_doc(_game())["devices"]["steam-deck-lcd"]
+    assert dev["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "args": [], "files": []},
+                               "uncapped": {"env": {}, "args": [], "files": []}}
+    assert dev["verified"] == {"proton": "default", "date": "2026-10-24"}
     bare = _game()
-    del bare["verified"], bare["source"]
-    assert validate_game_doc(bare)["verified"] == [] and validate_game_doc(bare)["source"] is None
+    del bare["devices"]["steam-deck-lcd"]["source"]
+    assert validate_game_doc(bare)["devices"]["steam-deck-lcd"]["source"] is None
+
+
+def test_game_doc_devices_are_independent():
+    """A device's block is tuned or added without touching the others."""
+    doc = _game()
+    doc["devices"]["rog-xbox-ally-x20"] = {"verified": {"proton": "Proton 9.0-4", "date": "2026-11-02"},
+                                           "profiles": {"quality": {"launch": {"env": {"DXVK_HUD": "fps"}}}}}
+    devs = validate_game_doc(doc)["devices"]
+    assert devs["steam-deck-lcd"]["profiles"]["quality"]["env"] == {"DXVK_ASYNC": "1"}
+    assert devs["rog-xbox-ally-x20"]["profiles"]["quality"]["env"] == {"DXVK_HUD": "fps"}
 
 
 @pytest.mark.parametrize("over", [
     {"extra": 1},
-    {"schema_version": 2},
+    {"schema_version": 1},
     {"appid": 0},
     {"appid": "480"},
     {"name": ""},
-    {"verified": {"proton": "x", "device": "x", "date": "2026-10-24"}},  # must be a list
-    {"verified": [{"proton": "x", "device": "../x", "date": "2026-10-24"}]},
-    {"verified": [{"proton": "x", "device": "x", "date": "yesterday"}]},
-    {"verified": [{"proton": "x", "device": "x"}]},
-    {"verified": [{"proton": "x", "device": "x", "date": "2026-10-24"}] * 17},
-    {"source": "http://example.com"},
-    {"source": "javascript:alert(1)"},
+    {"verified": []},  # schema 1 field at the top level
+    {"devices": {}},
+    {"devices": []},
+    {"devices": {"../x": {"verified": {"proton": "x", "date": "2026-10-24"}, "profiles": {}}}},
+    {"devices": {"Steam Deck": {"verified": {"proton": "x", "date": "2026-10-24"}, "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"profiles": {}}}},  # every block says where it was tested
+    {"devices": {"steam-deck-lcd": {"verified": {"proton": "x"}, "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"verified": {"proton": "x", "date": "yesterday"}, "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"verified": [{"proton": "x", "date": "2026-10-24"}], "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"verified": {"proton": "x", "date": "2026-10-24", "device": "x"}, "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"verified": {"proton": "", "date": "2026-10-24"}, "profiles": {}}}},
+    {"devices": {"steam-deck-lcd": {"verified": {"proton": "x", "date": "2026-10-24"}, "profiles": {}, "x": 1}}},
+    {"devices": {f"d{i}": {"verified": {"proton": "x", "date": "2026-10-24"}, "profiles": {}} for i in range(33)}},
+])
+def test_game_doc_rejected(over):
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(**over))
+
+
+@pytest.mark.parametrize("source", ["http://example.com", "javascript:alert(1)", ""])
+def test_game_doc_source_rejected(source):
+    doc = _game()
+    doc["devices"]["steam-deck-lcd"]["source"] = source
+    with pytest.raises(ValidationError):
+        validate_game_doc(doc)
+
+
+@pytest.mark.parametrize("profiles", [p["profiles"] for p in [
     {"profiles": {"battery": {}}},
     {"profiles": {"quality": {"files": {}}}},
     {"profiles": {"quality": {"files": [_xml("/etc/passwd")]}}},
@@ -261,10 +304,10 @@ def test_game_doc_valid():
     {"profiles": {"quality": {"launch": {"args": ["-x", "-x"]}}}},
     {"profiles": {"quality": {"launch": {"args": ["notaflag"]}}}},
     {"profiles": {"quality": {"launch": {"args": ["-x"] * 9}}}},
-])
-def test_game_doc_rejected(over):
+]])
+def test_game_doc_profiles_rejected(profiles):
     with pytest.raises(ValidationError):
-        validate_game_doc(_game(**over))
+        validate_game_doc(_game(profiles=profiles))
 
 
 def test_game_options_restrict_values():
@@ -286,13 +329,13 @@ def test_game_options_rejected(options):
 
 def test_game_doc_ini_files():
     ok = {"quality": {"files": [_xml("{install_dir}/G.ini", fmt="ini", values={"[/Script/X.Y]sg.A": "1"})]}}
-    assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["format"] == "ini"
+    assert validate_game_doc(_game(profiles=ok))["devices"]["steam-deck-lcd"]["profiles"]["quality"]["files"][0]["format"] == "ini"
 
 
 def test_game_doc_json_files():
     key = "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value"
     ok = {"quality": {"files": [_xml("{prefix}/U.json", fmt="json", values={key: "Low"})]}}
-    assert validate_game_doc(_game(profiles=ok))["profiles"]["quality"]["files"][0]["set"] == {key: "Low"}
+    assert validate_game_doc(_game(profiles=ok))["devices"]["steam-deck-lcd"]["profiles"]["quality"]["files"][0]["set"] == {key: "Low"}
 
 
 def test_game_file_name_must_match_appid(tmp_path):
@@ -304,27 +347,46 @@ def test_game_file_name_must_match_appid(tmp_path):
 def test_annotate_marks_supported_verified_and_profile():
     installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"},
                  {"appid": 2, "name": "Lies of P"}]
-    docs = {1245620: {"verified": [{"device": "rog-xbox-ally"}]}, 2: {"verified": []}}
+    docs = {1245620: {"devices": {"rog-xbox-ally": {}, "steam-deck-lcd": {}}}, 2: {"devices": {"legion-go": {}}}}
     applied = {"1": {"profile": "performance"}}
     rows = lambda device: [(g["supported"], g["verified"], g["profile"])
                            for g in games.annotate(installed, docs, applied, device)]
     assert rows("rog-xbox-ally") == [(True, True, None), (False, False, "performance"), (True, False, None)]
-    # Verified is per device: the same entry is untested on a Legion Go.
+    # Verified is per device: the entry has profiles for the Ally, not for a Legion Go.
     assert rows("legion-go")[0] == (True, False, None)
     assert rows(None)[0] == (True, False, None)
+    assert [g["devices"] for g in games.annotate(installed, docs, applied, None)] == [
+        ["rog-xbox-ally", "steam-deck-lcd"], [], ["legion-go"]]
+
+
+def test_profiles_for_borrows_only_when_the_device_has_none():
+    doc = {"devices": {"steam-deck-lcd": {"profiles": {"quality": "deck"}},
+                       "rog-xbox-ally": {"profiles": {"quality": "ally"}}}}
+    assert games.profiles_for(doc, "rog-xbox-ally", "steam-deck-lcd") == {"quality": "ally"}  # own wins
+    assert games.profiles_for(doc, "legion-go", "steam-deck-lcd") == {"quality": "deck"}
+    assert games.profiles_for(doc, "legion-go", None) == {}  # FPS cap only
+    assert games.profiles_for(doc, None, None) == {}
+    assert games.profiles_for(doc, "legion-go", "legion-go-s") == {}  # a device the entry doesn't have
+    assert games.profiles_for(None, "legion-go", "steam-deck-lcd") == {}  # no entry: generic
+
+
+@pytest.mark.parametrize("bad", ["../x", "Steam Deck", "", 1, ["steam-deck-lcd"], {"a": 1}, "x" * 41])
+def test_profiles_for_rejects_bad_profile_device(bad):
+    with pytest.raises(ValueError):
+        games.profiles_for({"devices": {}}, "legion-go", bad)
 
 
 def test_elden_ring_performance_and_uncapped_use_lowest_settings():
     doc = json.loads((games.DATA_DIR / f"{Game.ELDEN_RING.value}.json").read_text())
     (path, options), = doc["options"].items()
     for profile in ("performance", "uncapped"):
-        values = doc["profiles"][profile]["files"][0]["set"]
+        values = doc["devices"][TESTED]["profiles"][profile]["files"][0]["set"]
         for key, accepted in options.items():
             assert values[key] == accepted[0], (profile, key)  # option lists go lowest -> highest
 
 
 def test_lies_of_p_profiles_match_the_tested_presets():
-    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[Game.LIES_OF_P]["profiles"].items()}
+    profiles = {p: body["files"][0]["set"] for p, body in _profiles(Game.LIES_OF_P).items()}
     sg = lambda p, name: profiles[p][f"[ScalabilityGroups]sg.{name}Quality"]
     for p in profiles:
         # Every profile: anisotropic at max, texture at medium, game's own FPS limit off.
@@ -336,7 +398,7 @@ def test_lies_of_p_profiles_match_the_tested_presets():
 
 
 def test_hogwarts_profiles_are_graphics_only():
-    profiles = {p: body["files"][0]["set"] for p, body in games.load_games()[Game.HOGWARTS_LEGACY]["profiles"].items()}
+    profiles = {p: body["files"][0]["set"] for p, body in _profiles(Game.HOGWARTS_LEGACY).items()}
     for p, values in profiles.items():
         # The game reloads its upscaler/resolution section from its save: only scalability groups.
         assert all(k.startswith("[ScalabilityGroups]sg.") for k in values), p
@@ -347,7 +409,7 @@ def test_hogwarts_profiles_are_graphics_only():
 
 def test_crysis_3_profiles_follow_the_protondb_deck_reports():
     """Quality High (40 Hz with drops, so 30), Balanced Medium (45 Hz locked), Performance Low (60)."""
-    profiles = games.load_games()[Game.CRYSIS_3]["profiles"]
+    profiles = _profiles(Game.CRYSIS_3)
     levels = {"quality": "3", "balanced": "2", "performance": "1", "uncapped": "1"}
     for name, level in levels.items():
         values = profiles[name]["files"][0]["set"]
@@ -366,10 +428,11 @@ def test_bundled_games_leave_resolution_alone():
     banned = re.compile(r"ResolutionSize|Screen(Width|Height)|Resolution-|name=Resolution\]"
                         r"|\]r_(Width|Height|DisplayFreq)$")  # CryEngine game.cfg
     for appid, doc in games.load_games().items():
-        for name, body in doc["profiles"].items():
-            for f in body["files"]:
-                for key in f["set"]:
-                    assert not banned.search(key), (appid, name, key)
+        for device, entry in doc["devices"].items():
+            for name, body in entry["profiles"].items():
+                for f in body["files"]:
+                    for key in f["set"]:
+                        assert not banned.search(key), (appid, device, name, key)
 
 
 def test_game_doc_resolution_field_rejected():
@@ -378,15 +441,17 @@ def test_game_doc_resolution_field_rejected():
 
 
 def test_bundled_games_load():
-    er = games.load_games()[Game.ELDEN_RING]
     real = set(devices.load_devices()) - {devices.GENERIC}  # nobody can verify on the fallback
-    for doc in games.load_games().values():
-        assert {v["device"] for v in doc["verified"]} <= real
     assert set(games.load_games()) == set(Game)  # a new entry goes in Game too
-    for game in Game:  # every bundled game is verified on every device
-        assert {v["device"] for v in games.load_games()[game]["verified"]} == real
+    # Tested on a ROG Xbox Ally at 15 W, which matches the Steam Deck's chip: the same profiles for
+    # those three. Other devices borrow one of them until someone adds their own block.
+    deck_class = ("steam-deck-lcd", "steam-deck-oled", TESTED)
+    for game in Game:
+        devs = games.load_games()[game]["devices"]
+        assert set(devs) <= real, game
+        assert all(devs[d]["profiles"] == devs[TESTED]["profiles"] for d in deck_class), game
     for profile in ("quality", "balanced", "performance", "uncapped"):
-        assert er["profiles"][profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
+        assert _profiles(Game.ELDEN_RING)[profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
 
 # --- devices ---------------------------------------------------------------
 
@@ -518,12 +583,12 @@ def test_bundled_cyberpunk_sets_index_with_every_list_value():
     options = next(iter(doc["options"].values()))
     lists = {k: v for k, v in options.items() if k.endswith("/value") and v != ["false", "true"]}
     assert len(lists) == 20
-    for name, profile in doc["profiles"].items():
+    for name, profile in doc["devices"][TESTED]["profiles"].items():
         values = profile["files"][0]["set"]
         for key, accepted in lists.items():
             assert values[key.replace("/value", "/index")] == str(accepted.index(values[key])), (name, key)
 
 
 def test_bundled_cyberpunk_skips_launcher_on_every_profile():
-    for name, profile in games.load_games()[Game.CYBERPUNK_2077]["profiles"].items():
+    for name, profile in _profiles(Game.CYBERPUNK_2077).items():
         assert profile["args"] == ["--launcher-skip"], name

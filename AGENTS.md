@@ -9,8 +9,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
 - `py_modules/loadout/` - pure core (never imports `decky`):
   - `validate.py` device/game doc schema + env allow/deny rules
   - `games.py` loads `data/games/<appid>.json` (per-game env + config-file keys per profile);
-    `annotate` marks installed games as supported / verified on this device / profile applied,
-    for the UI's Show filter (`GAME_FILTERS`)
+    `annotate` marks installed games as supported / verified on this device (has a `devices` block for it) /
+    profile applied, for the UI's Show filter (`GAME_FILTERS`); `profiles_for` picks the device's own
+    profiles, else those borrowed from the device the user picked (`settings.games[appid].profile_device`)
   - `paths.py` token expansion + `safe_path` (resolve symlinks, must stay in prefix/install dir)
   - `textfile.py` decode/encode config files (UTF-8 or UTF-16, with or without BOM; ELDEN RING
     writes UTF-16 LE without BOM) + the `VALUE` charset allowed in any file
@@ -28,7 +29,9 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   - `steam.py` libraryfolders.vdf / appmanifest parsing, per-game prefix/install paths
   - `store.py` `atomic_write` + JSON files (settings = intent, state = backups)
   - `data/devices/*.json` bundled device tables (`generic.json` is required)
-  - `data/games/<appid>.json` bundled per-game data (device-independent)
+  - `data/games/<appid>.json` bundled per-game data: `options` once, profiles per device under
+    `devices.<device-id>` (each with its own `verified` {proton, date} and `source`), so a device is
+    tuned or added without touching the others. The FPS cap still comes from the device table
 - `scripts/capture.py` - contributor tool, run on the device with the system `python3` (Decky never
   loads it, so the stdlib limit below doesn't apply; it ships in the zip under `scripts/`).
   Snapshots the prefix and install dir, finds the keys that changed with the core parsers and
@@ -42,6 +45,11 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   hundreds of items, and the verified list will grow too.
   Text the user must read goes on a focusable item (e.g. a dropdown's `description`): the QAM
   only scrolls to focusable items, so a text row below the last one gets cut off.
+  The device is picked once in Setup; the panel only shows it, first row (no switch: another device's profiles
+  are borrowed per game).
+  **Reset Loadout** (in Settings) applies Default to every game with a profile (frontend: launch
+  options are written there), then `reset_settings`; it stops, settings kept, at the first game that fails.
+  The Game dropdown's description (`gameNote`) explains the selected game's mark (other devices / generic).
   The FPS cap switch is per game (`settings.games[appid].fps_cap`, default on); `get_bootstrap`
   returns each profile's cap for the configured device (`fps_limits`) for its label.
   Report every outcome with `report()` / `reportError()`: they write the in-panel status line and
@@ -73,7 +81,7 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
   not text pasted from a terminal: check with `xxd` on the device first.
 
 ## Scope
-IN: game list, 4 profiles + Default, FPS cap (DXVK/VKD3D env), per-game env and game args, per-game XML/INI/JSON config keys,
+IN: game list, 4 profiles + Default (per device, borrowable by other devices), FPS cap (DXVK/VKD3D env), per-game env and game args, per-game XML/INI/JSON config keys,
 launch options, settings file,
 device detection. Profiles set graphics (upscaler included), never resolution; `GAMES.md` lists
 the bundled games.
@@ -112,7 +120,9 @@ on a game also overrides the QAM performance overlay (ValveSoftware/gamescope#18
 - FPS cap env per Proton: Proton 11.0's DXVK has no `DXVK_FRAME_RATE` string in `dxgi.dll`/`d3d11.dll`
   (checked on device; Crysis 3, D3D11, ran 70+ under a 30 cap with the DXVK HUD showing), so the
   cap also sets `DXVK_CONFIG=dxgi.maxFrameRate=N;d3d9.maxFrameRate=N`. Its `d3d12core.dll` still
-  reads `VKD3D_FRAME_RATE`. Since which Proton `DXVK_FRAME_RATE` stopped working: unknown.
+  reads `VKD3D_FRAME_RATE` (seen in game: Cyberpunk 2077, D3D12, held a 40 cap on a ROG Xbox Ally).
+  D3D9 seen in game too (Space Marine Anniversary Edition, `SpaceMarine.exe` loads only d3d9.dll, held a
+  40 cap). D3D10 (same `dxgi.maxFrameRate` as D3D11 in DXVK): from DXVK's docs, not seen in a game. Since which Proton `DXVK_FRAME_RATE` stopped working: unknown.
 - Which field a JSON game reads: Cyberpunk reads `index` for fixed lists (seen on device: `value`
   alone was ignored) and `value` for dynamic ones (FSR2, QuickPresets). The entry sets both for
   fixed lists; `test_bundled_cyberpunk_sets_index_with_every_list_value` keeps them in sync.

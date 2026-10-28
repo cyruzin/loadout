@@ -12,11 +12,15 @@ should work too.
 - Lists installed Steam games by reading `libraryfolders.vdf` and `appmanifest_*.acf` (all libraries,
   including SD cards). Proton/runtime tools are always hidden. A **Show** filter picks which games
   are listed (saved in settings):
-  - **Verified on this device** (default): games with a Loadout entry whose `verified` list
-    includes your device.
-  - **All Loadout games**: also entries not verified on your device, marked "(untested)", and any
-    game with a profile applied, even a generic one.
+  - **Verified on this device** (default): games with a Loadout entry that has profiles for your
+    device.
+  - **All Loadout games**: also entries with profiles for other devices only, marked
+    "(other devices)", and any game with a profile applied, even a generic one.
   - **All games**: also every other installed game, marked "(generic)" (FPS cap only).
+
+  For a selected game that isn't verified on your device, the **Game** dropdown says what a
+  profile does there: "Other devices" (profiles exist for other devices only) or "Generic" (no
+  Loadout settings, FPS cap only).
 
   When a filter matches more than 50 games (a big library, or lots of verified games), only the 50
   most recently played are listed (plus the running game and any game with a profile applied),
@@ -39,6 +43,10 @@ should work too.
 
   Your own launch options are kept. Switching profiles never stacks; Default restores your original
   string exactly (or, if you edited it meanwhile, removes only the Loadout block).
+- Profiles are per device, so each device's graphics can be tuned on its own. When a game has no
+  profiles for your device, **Use profiles from** lists the devices it has them for: pick one with a
+  similar chip (a ROG Ally X can start from the ROG Xbox Ally's). Until you pick one, the profiles
+  only set the FPS cap. The FPS cap always comes from your own device's table.
 - Each game has an **Apply the profile's N FPS cap** switch (on by default; shown for Quality,
   Balanced and Performance with the cap from your device's table). Off, the profile only changes
   the game's settings and you set the frame limit in Steam's Quick Access Menu, which you can
@@ -56,7 +64,12 @@ should work too.
 - Shows a dry-run diff and asks for confirmation before changing anything.
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
   Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
-  it on first run.
+  it on first run. After that the panel only shows it (**Device**, first in the panel).
+- **Reset Loadout** (under **Settings**, after a confirmation listing the affected games) applies
+  Default (original) to every game with a profile, then clears Loadout's settings so Setup asks for
+  the device again. The confirmation names the 10 most recently played (and how many more); the
+  panel shows the progress ("Resetting 3 of 20: …"). It's blocked while one of those games is
+  running, and stops without clearing anything if a game can't be restored.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
 - Launch-option changes (FPS cap, env vars, game arguments) apply the next time the game launches.
@@ -89,24 +102,25 @@ Values live in `py_modules/loadout/data/devices/*.json`.
 ### Game-specific vs. generic profiles
 
 What a profile does depends on whether the game has a Loadout entry in
-`py_modules/loadout/data/games/`:
+`py_modules/loadout/data/games/` with profiles for your device (or one you picked under
+**Use profiles from**):
 
-| | Game with a Loadout entry (e.g. ELDEN RING) | Any other game ("generic") |
+| | Entry with profiles for your device (e.g. ELDEN RING) | Any other game ("generic"), or an entry for other devices with none picked |
 |---|---|---|
 | FPS cap from the device table | yes | yes |
 | Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
 | Per-game launch arguments (e.g. `--launcher-skip`) | yes | no |
 | In-game graphics settings (config file edits) | yes, where the entry defines them | no |
 
-In short: **without a game-specific entry, a profile only applies the FPS cap.** Graphics stay as
+In short: **without profiles for your device, a profile only applies the FPS cap.** Graphics stay as
 you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
 shows only verified games by default; pick **All games** in the Show filter to use the generic cap
-on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry.
+on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry or your device's profiles.
 
 ### Supported games
 
 ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy and Crysis 3 Remastered have game-specific entries. What each
-profile sets per game, and on which devices it was verified: [GAMES.md](GAMES.md).
+profile sets per game, and which devices it has profiles for: [GAMES.md](GAMES.md).
 
 ### Not included
 
@@ -212,8 +226,8 @@ AGENTS.md                  rules for coding agents
 Game and device data come from people testing on real hardware. [CONTRIBUTING.md](CONTRIBUTING.md)
 has the step-by-step for:
 
-- **verifying an existing game on your device**, which moves it to the default
-  "Verified on this device" list for everyone with that device;
+- **adding your device to an existing game** (its own profiles, tuned higher or lower), which
+  moves it to the default "Verified on this device" list for everyone with that device;
 - adding a new game (finding its config file, mapping menu options to file values, writing the
   entry, testing every profile);
 - adding a new device (DMI string, panel, FPS caps).

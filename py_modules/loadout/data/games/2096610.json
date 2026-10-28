@@ -1,20 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "appid": 2096610,
   "name": "Crysis 3 Remastered",
-  "source": "https://www.protondb.com/app/2096610",
-  "verified": [
-    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-27" },
-    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-27" },
-    { "proton": "default", "device": "rog-ally", "date": "2026-10-27" },
-    { "proton": "default", "device": "rog-ally-x", "date": "2026-10-27" },
-    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-27" },
-    { "proton": "default", "device": "rog-xbox-ally-x", "date": "2026-10-27" },
-    { "proton": "default", "device": "rog-xbox-ally-x20", "date": "2026-10-27" },
-    { "proton": "default", "device": "legion-go", "date": "2026-10-27" },
-    { "proton": "default", "device": "legion-go-2", "date": "2026-10-27" },
-    { "proton": "default", "device": "legion-go-s", "date": "2026-10-27" }
-  ],
   "options": {
     "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg": {
       "[]sys_spec_GameEffects": ["1", "2", "3", "4"],
@@ -31,94 +18,288 @@
       "[]r_MotionBlurShutterSpeed": ["0", "0.0025", "0.004", "0.0055"]
     }
   },
-  "profiles": {
-    "quality": {
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-          "format": "ini",
-          "set": {
-            "[]sys_spec_GameEffects": "3",
-            "[]sys_spec_ObjectDetail": "3",
-            "[]sys_spec_Particles": "3",
-            "[]sys_spec_PostProcessing": "3",
-            "[]sys_spec_Shading": "3",
-            "[]sys_spec_Shadows": "3",
-            "[]sys_spec_Water": "3",
-            "[]sys_spec_TextureResolution": "3",
-            "[]r_vSync": "0",
-            "[]r_TexMaxAnisotropy": "16",
-            "[]r_TexMinAnisotropy": "16",
-            "[]r_MotionBlurShutterSpeed": "0"
-          }
+  "devices": {
+    "steam-deck-lcd": {
+      "source": "https://www.protondb.com/app/2096610",
+      "verified": { "proton": "default", "date": "2026-10-27" },
+      "profiles": {
+        "quality": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "3",
+                "[]sys_spec_ObjectDetail": "3",
+                "[]sys_spec_Particles": "3",
+                "[]sys_spec_PostProcessing": "3",
+                "[]sys_spec_Shading": "3",
+                "[]sys_spec_Shadows": "3",
+                "[]sys_spec_Water": "3",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "2",
+                "[]sys_spec_ObjectDetail": "2",
+                "[]sys_spec_Particles": "2",
+                "[]sys_spec_PostProcessing": "2",
+                "[]sys_spec_Shading": "2",
+                "[]sys_spec_Shadows": "2",
+                "[]sys_spec_Water": "2",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
         }
-      ]
+      }
     },
-    "balanced": {
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-          "format": "ini",
-          "set": {
-            "[]sys_spec_GameEffects": "2",
-            "[]sys_spec_ObjectDetail": "2",
-            "[]sys_spec_Particles": "2",
-            "[]sys_spec_PostProcessing": "2",
-            "[]sys_spec_Shading": "2",
-            "[]sys_spec_Shadows": "2",
-            "[]sys_spec_Water": "2",
-            "[]sys_spec_TextureResolution": "3",
-            "[]r_vSync": "0",
-            "[]r_TexMaxAnisotropy": "16",
-            "[]r_TexMinAnisotropy": "16",
-            "[]r_MotionBlurShutterSpeed": "0"
-          }
+    "steam-deck-oled": {
+      "source": "https://www.protondb.com/app/2096610",
+      "verified": { "proton": "default", "date": "2026-10-27" },
+      "profiles": {
+        "quality": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "3",
+                "[]sys_spec_ObjectDetail": "3",
+                "[]sys_spec_Particles": "3",
+                "[]sys_spec_PostProcessing": "3",
+                "[]sys_spec_Shading": "3",
+                "[]sys_spec_Shadows": "3",
+                "[]sys_spec_Water": "3",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "2",
+                "[]sys_spec_ObjectDetail": "2",
+                "[]sys_spec_Particles": "2",
+                "[]sys_spec_PostProcessing": "2",
+                "[]sys_spec_Shading": "2",
+                "[]sys_spec_Shadows": "2",
+                "[]sys_spec_Water": "2",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
         }
-      ]
+      }
     },
-    "performance": {
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-          "format": "ini",
-          "set": {
-            "[]sys_spec_GameEffects": "1",
-            "[]sys_spec_ObjectDetail": "1",
-            "[]sys_spec_Particles": "1",
-            "[]sys_spec_PostProcessing": "1",
-            "[]sys_spec_Shading": "1",
-            "[]sys_spec_Shadows": "1",
-            "[]sys_spec_Water": "1",
-            "[]sys_spec_TextureResolution": "3",
-            "[]r_vSync": "0",
-            "[]r_TexMaxAnisotropy": "16",
-            "[]r_TexMinAnisotropy": "16",
-            "[]r_MotionBlurShutterSpeed": "0"
-          }
+    "rog-xbox-ally": {
+      "source": "https://www.protondb.com/app/2096610",
+      "verified": { "proton": "default", "date": "2026-10-27" },
+      "profiles": {
+        "quality": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "3",
+                "[]sys_spec_ObjectDetail": "3",
+                "[]sys_spec_Particles": "3",
+                "[]sys_spec_PostProcessing": "3",
+                "[]sys_spec_Shading": "3",
+                "[]sys_spec_Shadows": "3",
+                "[]sys_spec_Water": "3",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "2",
+                "[]sys_spec_ObjectDetail": "2",
+                "[]sys_spec_Particles": "2",
+                "[]sys_spec_PostProcessing": "2",
+                "[]sys_spec_Shading": "2",
+                "[]sys_spec_Shadows": "2",
+                "[]sys_spec_Water": "2",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
+              "format": "ini",
+              "set": {
+                "[]sys_spec_GameEffects": "1",
+                "[]sys_spec_ObjectDetail": "1",
+                "[]sys_spec_Particles": "1",
+                "[]sys_spec_PostProcessing": "1",
+                "[]sys_spec_Shading": "1",
+                "[]sys_spec_Shadows": "1",
+                "[]sys_spec_Water": "1",
+                "[]sys_spec_TextureResolution": "3",
+                "[]r_vSync": "0",
+                "[]r_TexMaxAnisotropy": "16",
+                "[]r_TexMinAnisotropy": "16",
+                "[]r_MotionBlurShutterSpeed": "0"
+              }
+            }
+          ]
         }
-      ]
-    },
-    "uncapped": {
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-          "format": "ini",
-          "set": {
-            "[]sys_spec_GameEffects": "1",
-            "[]sys_spec_ObjectDetail": "1",
-            "[]sys_spec_Particles": "1",
-            "[]sys_spec_PostProcessing": "1",
-            "[]sys_spec_Shading": "1",
-            "[]sys_spec_Shadows": "1",
-            "[]sys_spec_Water": "1",
-            "[]sys_spec_TextureResolution": "3",
-            "[]r_vSync": "0",
-            "[]r_TexMaxAnisotropy": "16",
-            "[]r_TexMinAnisotropy": "16",
-            "[]r_MotionBlurShutterSpeed": "0"
-          }
-        }
-      ]
+      }
     }
   }
 }

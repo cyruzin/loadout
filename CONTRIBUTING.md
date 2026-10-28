@@ -3,9 +3,9 @@
 Loadout is an engine; what it knows about each game and device lives in JSON files under
 `py_modules/loadout/data/`. Most contributions are one of these:
 
-1. [Verify an existing game on your device](#1-verify-an-existing-game-on-your-device): the
-   easiest one. It moves the game from "(untested)" to the default **Verified on this device** list
-   for everyone with that device.
+1. [Add your device to an existing game](#1-add-your-device-to-an-existing-game): the
+   easiest one. It moves the game from "(other devices)" to the default **Verified on this device**
+   list for everyone with that device.
 2. [Add a new game](#2-add-a-new-game).
 3. [Add a new device](#3-add-a-new-device).
 
@@ -21,35 +21,44 @@ in-game menu or real hardware. If you're unsure about something, leave it out an
 Know your device id: it's the file name (without `.json`) in `py_modules/loadout/data/devices/`,
 e.g. `steam-deck-oled` or `rog-xbox-ally`. The Loadout setup screen shows which one was detected.
 
-## 1. Verify an existing game on your device
+## 1. Add your device to an existing game
 
-The game already has `py_modules/loadout/data/games/<appid>.json`, but your device isn't in its
-`verified` list (Loadout shows it as "(untested)" under **All Loadout games**).
+The game already has `py_modules/loadout/data/games/<appid>.json`, but its `devices` has no block
+for your device (Loadout shows it as "(other devices)" under **All Loadout games**). Each device has
+its own block, so yours can set graphics higher or lower than the others without changing them.
 
 1. Install the latest Loadout release (see [Installing a release](README.md#releasing)).
-2. Close the game. Apply each profile the entry defines (Quality, Balanced, Performance, Uncapped)
-   and, for each one:
+2. Under **Use profiles from**, pick the listed device closest to yours (e.g. `rog-xbox-ally` for a
+   ROG Xbox Ally X20). Its profiles are your starting point.
+3. Close the game. Apply each profile (Quality, Balanced, Performance, Uncapped) and, for each one:
    - read the confirmation diff: every key should change to the value in the JSON;
    - launch the game and check that the in-game menu shows those settings;
    - after launching, check the file again: some games overwrite values from their save on
      launch, and a key the game doesn't read from this file doesn't belong in the entry;
-   - play a few minutes: FPS cap holds, no crashes, no visual glitches.
-3. Apply **Default (original)** with the game closed and check that your previous settings and
+   - play a few minutes: FPS cap holds, no crashes, no visual glitches. If your device has headroom
+     (or struggles), change settings in the menu and note what holds the profile's FPS cap.
+4. Apply **Default (original)** with the game closed and check that your previous settings and
    launch options are back.
-4. Note the Proton version the game runs with (game Properties → Compatibility). Use `default`
+5. Note the Proton version the game runs with (game Properties → Compatibility). Use `default`
    only if you didn't force one; better, write the exact version, e.g. `Proton 9.0-4`.
-5. Add your device to `verified`:
+6. Copy the starting device's block under `devices`, rename it to your device id, set `verified`
+   and change only the values you tested. Values must be in the game's `options`:
 
    ```json
-   "verified": [
-     { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" },
-     { "proton": "Proton 9.0-4", "device": "legion-go-s", "date": "2026-11-02" }
-   ]
+   "devices": {
+     "rog-xbox-ally": { "...": "unchanged" },
+     "rog-xbox-ally-x20": {
+       "source": "https://github.com/cyruzin/loadout/pull/123",
+       "verified": { "proton": "Proton 9.0-4", "date": "2026-11-02" },
+       "profiles": { "quality": { "files": [ "..." ] }, "...": "..." }
+     }
+   }
    ```
 
-6. Run the tests (`.venv/bin/python -m pytest -q`) and open the PR.
+7. Run the tests (`.venv/bin/python -m pytest -q`) and open the PR.
 
-If something didn't work, don't add `verified`: open an issue instead with what you saw.
+Tuning an existing device's block works the same way: test it on that device and change only
+that block. If something didn't work, don't add a block: open an issue instead with what you saw.
 
 ## 2. Add a new game
 
@@ -160,26 +169,28 @@ model):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "appid": 1245620,
   "name": "ELDEN RING",
-  "source": "https://link-to-where-these-settings-came-from",
-  "verified": [
-    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" }
-  ],
   "options": {
     "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml": {
       "MotionBlur": ["DISABLE", "LOW", "MEDIUM", "HIGH"]
     }
   },
-  "profiles": {
-    "quality": {
-      "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
-      "files": [{
-        "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-        "format": "xml",
-        "set": { "MotionBlur": "DISABLE" }
-      }]
+  "devices": {
+    "rog-xbox-ally": {
+      "source": "https://link-to-where-these-settings-came-from",
+      "verified": { "proton": "default", "date": "2026-10-24" },
+      "profiles": {
+        "quality": {
+          "launch": { "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" } },
+          "files": [{
+            "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+            "format": "xml",
+            "set": { "MotionBlur": "DISABLE" }
+          }]
+        }
+      }
     }
   }
 }
@@ -203,7 +214,11 @@ model):
   no values, spaces or shell characters. Loadout puts them right after `%command%`.
 - **`source`**: where the settings came from (forum post, guide, ProtonDB report). If they're your
   own, link the PR or an issue describing your tests.
-- **`verified`**: only devices where you did the checks in [section 1](#1-verify-an-existing-game-on-your-device).
+- **`options`** are the game's, shared by every device; **`devices`** has one block per device id
+  (a file name in `py_modules/loadout/data/devices/`, without `.json`), each with its own profiles.
+  Add a block only for a device where you did the checks in [section 1](#1-add-your-device-to-an-existing-game);
+  its `verified` says with which Proton and when. Devices with the same chip can share the same
+  profiles (the bundled games copy the ROG Xbox Ally's to both Steam Decks).
 
 ### 2.5 Test
 
@@ -212,7 +227,7 @@ model):
 2. Build and install your version on the device: `scripts/package.sh`, copy `out/Loadout.zip` to
    the device, Decky → Developer → **Install Plugin from ZIP File**, then
    `sudo systemctl restart plugin_loader`.
-3. Do the checks from [section 1](#1-verify-an-existing-game-on-your-device) for every profile.
+3. Do the checks from [section 1](#1-add-your-device-to-an-existing-game) for every profile.
 
 ## 3. Add a new device
 
@@ -228,7 +243,7 @@ model):
 ## Pull request checklist
 
 - [ ] Tests pass (`.venv/bin/python -m pytest -q`).
-- [ ] Device, Proton version and date of the test are in `verified` (or the PR says why not).
+- [ ] Each device block you added or changed has the Proton version and date of the test in `verified`.
 - [ ] `source` links to where the settings came from.
 - [ ] For new config files: `file`/`xxd`/`cat` output and the menu → file value mapping are in
       the PR description.

@@ -1,19 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "appid": 1245620,
   "name": "ELDEN RING",
-  "verified": [
-    { "proton": "default", "device": "steam-deck-lcd", "date": "2026-10-24" },
-    { "proton": "default", "device": "steam-deck-oled", "date": "2026-10-24" },
-    { "proton": "default", "device": "rog-ally", "date": "2026-10-24" },
-    { "proton": "default", "device": "rog-ally-x", "date": "2026-10-24" },
-    { "proton": "default", "device": "rog-xbox-ally", "date": "2026-10-24" },
-    { "proton": "default", "device": "rog-xbox-ally-x", "date": "2026-10-24" },
-    { "proton": "default", "device": "rog-xbox-ally-x20", "date": "2026-10-24" },
-    { "proton": "default", "device": "legion-go", "date": "2026-10-24" },
-    { "proton": "default", "device": "legion-go-2", "date": "2026-10-24" },
-    { "proton": "default", "device": "legion-go-s", "date": "2026-10-24" }
-  ],
   "options": {
     "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml": {
       "TextureQuality": ["LOW", "MEDIUM", "HIGH", "MAX"],
@@ -32,104 +20,315 @@
       "GrassQuality": ["MEDIUM", "HIGH", "MAX"]
     }
   },
-  "profiles": {
-    "quality": {
-      "launch": {
-        "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
-      },
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-          "format": "xml",
-          "set": {
-            "ScreenMode": "BORDERLESS",
-            "Auto-detectBestRenderingSettings": "OFF",
-            "QualitySetting": "CUSTOM",
-            "TextureQuality": "HIGH",
-            "Antialiasing": "HIGH",
-            "SSAO": "DISABLE",
-            "DepthOfField": "DISABLE",
-            "MotionBlur": "DISABLE",
-            "ShadowQuality": "LOW",
-            "LightingQuality": "MEDIUM",
-            "EffectsQuality": "MEDIUM",
-            "ReflectionQuality": "LOW",
-            "WaterSurfaceQuality": "HIGH",
-            "ShadeQuality": "LOW",
-            "VolumetricEffectQuality": "MEDIUM",
-            "RaytracingQuality": "DISABLE",
-            "GIDataQuality": "LOW",
-            "GrassQuality": "MEDIUM"
+  "devices": {
+    "steam-deck-lcd": {
+      "verified": { "proton": "default", "date": "2026-10-24" },
+      "profiles": {
+        "quality": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "HIGH",
+                "Antialiasing": "HIGH",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "MEDIUM",
+                "EffectsQuality": "MEDIUM",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "HIGH",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "MEDIUM",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
           }
+        },
+        "performance": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
         }
-      ]
-    },
-    "balanced": {
-      "launch": {
-        "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
       }
     },
-    "performance": {
-      "launch": {
-        "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
-      },
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-          "format": "xml",
-          "set": {
-            "ScreenMode": "BORDERLESS",
-            "Auto-detectBestRenderingSettings": "OFF",
-            "QualitySetting": "CUSTOM",
-            "TextureQuality": "LOW",
-            "Antialiasing": "DISABLE",
-            "SSAO": "DISABLE",
-            "DepthOfField": "DISABLE",
-            "MotionBlur": "DISABLE",
-            "ShadowQuality": "LOW",
-            "LightingQuality": "LOW",
-            "EffectsQuality": "LOW",
-            "ReflectionQuality": "LOW",
-            "WaterSurfaceQuality": "LOW",
-            "ShadeQuality": "LOW",
-            "VolumetricEffectQuality": "LOW",
-            "RaytracingQuality": "DISABLE",
-            "GIDataQuality": "LOW",
-            "GrassQuality": "MEDIUM"
+    "steam-deck-oled": {
+      "verified": { "proton": "default", "date": "2026-10-24" },
+      "profiles": {
+        "quality": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "HIGH",
+                "Antialiasing": "HIGH",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "MEDIUM",
+                "EffectsQuality": "MEDIUM",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "HIGH",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "MEDIUM",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
           }
+        },
+        "performance": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
         }
-      ]
+      }
     },
-    "uncapped": {
-      "launch": {
-        "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
-      },
-      "files": [
-        {
-          "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
-          "format": "xml",
-          "set": {
-            "ScreenMode": "BORDERLESS",
-            "Auto-detectBestRenderingSettings": "OFF",
-            "QualitySetting": "CUSTOM",
-            "TextureQuality": "LOW",
-            "Antialiasing": "DISABLE",
-            "SSAO": "DISABLE",
-            "DepthOfField": "DISABLE",
-            "MotionBlur": "DISABLE",
-            "ShadowQuality": "LOW",
-            "LightingQuality": "LOW",
-            "EffectsQuality": "LOW",
-            "ReflectionQuality": "LOW",
-            "WaterSurfaceQuality": "LOW",
-            "ShadeQuality": "LOW",
-            "VolumetricEffectQuality": "LOW",
-            "RaytracingQuality": "DISABLE",
-            "GIDataQuality": "LOW",
-            "GrassQuality": "MEDIUM"
+    "rog-xbox-ally": {
+      "verified": { "proton": "default", "date": "2026-10-24" },
+      "profiles": {
+        "quality": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "HIGH",
+                "Antialiasing": "HIGH",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "MEDIUM",
+                "EffectsQuality": "MEDIUM",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "HIGH",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "MEDIUM",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
           }
+        },
+        "performance": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "uncapped": {
+          "launch": {
+            "env": { "MESA_VK_WSI_PRESENT_MODE": "immediate" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml",
+              "format": "xml",
+              "set": {
+                "ScreenMode": "BORDERLESS",
+                "Auto-detectBestRenderingSettings": "OFF",
+                "QualitySetting": "CUSTOM",
+                "TextureQuality": "LOW",
+                "Antialiasing": "DISABLE",
+                "SSAO": "DISABLE",
+                "DepthOfField": "DISABLE",
+                "MotionBlur": "DISABLE",
+                "ShadowQuality": "LOW",
+                "LightingQuality": "LOW",
+                "EffectsQuality": "LOW",
+                "ReflectionQuality": "LOW",
+                "WaterSurfaceQuality": "LOW",
+                "ShadeQuality": "LOW",
+                "VolumetricEffectQuality": "LOW",
+                "RaytracingQuality": "DISABLE",
+                "GIDataQuality": "LOW",
+                "GrassQuality": "MEDIUM"
+              }
+            }
+          ]
         }
-      ]
+      }
     }
   }
 }

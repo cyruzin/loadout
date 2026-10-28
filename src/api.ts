@@ -10,7 +10,8 @@ export const PROFILES: { id: Profile; label: string }[] = [
   { id: "uncapped", label: "Uncapped" },
 ];
 
-export interface GameSettings { profile: Profile; fps_cap?: boolean }
+// profile_device: whose profiles to borrow when the game has none for this device (null: FPS cap only).
+export interface GameSettings { profile: Profile; fps_cap?: boolean; profile_device?: string | null }
 export interface Settings {
   schema_version: number;
   device: string | null;
@@ -28,6 +29,7 @@ export interface Bootstrap {
 export type GameFilter = "verified" | "loadout" | "all";
 export interface Game {
   appid: number; name: string; supported: boolean; verified: boolean; profile: Profile | null;
+  devices: string[];  // devices the game has Loadout profiles for
 }
 export interface Change { kind: string; target: string; key: string; old: string | null; new: string | null }
 export interface Plan {
@@ -45,10 +47,13 @@ export const getBootstrap = callable<[], Bootstrap>("get_bootstrap");
 export const listGames = callable<[], Game[]>("list_games");
 export const saveSettings = callable<[device: string], Settings>("save_settings");
 export const setGameFilter = callable<[filter: GameFilter], Settings>("set_game_filter");
+export const resetSettings = callable<[], Settings>("reset_settings");
 export const planProfile =
-  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean], Plan>("plan_profile");
+  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean, profileDevice: string | null], Plan>(
+    "plan_profile");
 export const applyProfile =
-  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean], ApplyResult>("apply_profile");
+  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean, profileDevice: string | null],
+    ApplyResult>("apply_profile");
 
 // Steam client internals (not a public contract): read/write a game's launch options.
 export function getLaunchOptions(appid: number): Promise<string> {

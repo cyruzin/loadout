@@ -305,7 +305,7 @@ ELDEN_RING = ("""<?xml version="1.0" encoding="UTF-16"?>
 def test_elden_ring_real_file_quality_round_trip(tmp_path):
     from loadout import games
     assert ELDEN_RING[:4] == b"<\x00?\x00"  # same first bytes as the device's xxd
-    spec = games.load_games()[1245620]["profiles"]["quality"]["files"]
+    spec = games.load_games()[1245620]["devices"]["rog-xbox-ally"]["profiles"]["quality"]["files"]
     ctx = ctx_for(tmp_path)
     cfg = tmp_path / "pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing/GraphicsConfig.xml"
     cfg.parent.mkdir(parents=True)
@@ -447,7 +447,7 @@ LastOpened=LiesofP
 
 def test_lies_of_p_real_file_profiles_round_trip(tmp_path):
     from loadout import games
-    profiles = games.load_games()[1627720]["profiles"]
+    profiles = games.load_games()[1627720]["devices"]["rog-xbox-ally"]["profiles"]
     ctx = ctx_for(tmp_path)
     cfg = tmp_path / "game/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini"
     cfg.parent.mkdir(parents=True)
@@ -514,7 +514,7 @@ LastOpened=Phoenix
 
 def test_hogwarts_real_file_profiles_round_trip(tmp_path):
     from loadout import games
-    profiles = games.load_games()[990080]["profiles"]
+    profiles = games.load_games()[990080]["devices"]["rog-xbox-ally"]["profiles"]
     ctx = ctx_for(tmp_path)
     cfg = tmp_path / "pfx/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini"
     cfg.parent.mkdir(parents=True)
@@ -685,7 +685,7 @@ def _cyberpunk_file(values):
 
 def test_cyberpunk_profiles_round_trip(tmp_path):
     from loadout import games
-    profiles = games.load_games()[1091500]["profiles"]
+    profiles = games.load_games()[1091500]["devices"]["rog-xbox-ally"]["profiles"]
     balanced = profiles["balanced"]["files"]
     raw = _cyberpunk_file(balanced[0]["set"])  # the game's "Steam Deck" preset
     assert raw.startswith(b'{\n    "version": 152,\n    "data": [\n') and not raw.endswith(b"\n")

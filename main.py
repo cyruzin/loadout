@@ -12,11 +12,15 @@ from loadout.games import GAME_FILTERS  # noqa: E402
 from loadout.validate import PROFILES  # noqa: E402
 
 # Intent only (forward-compatible, later the export format). Backups live in STATE.
-SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", {
-    "schema_version": 1, "device": None, "global_profile": None, "games": {},
-    "game_filter": "verified",
-    "last_game": None,  # last game a profile was applied to: selected when the QAM opens
-})
+def _default_settings():
+    return {
+        "schema_version": 1, "device": None, "global_profile": None, "games": {},
+        "game_filter": "verified",
+        "last_game": None,  # last game a profile was applied to: selected when the QAM opens
+    }
+
+
+SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", _default_settings())
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
 DEVICES = devices.load_devices()
 GAMES = games.load_games()
@@ -38,14 +42,16 @@ def _level(device, profile):
     return devices.resolve_level(DEVICES, device, profile, devices.native_class(dev))
 
 
-def _plan(appid, profile, current, fps_cap):
+def _plan(appid, profile, current, fps_cap, profile_device):
     key = _check_appid(appid)
     if not isinstance(current, str) or len(current) > 4096:
         raise ValueError("invalid launch options")
     if type(fps_cap) is not bool:
         raise ValueError("invalid fps_cap")
-    level, approx = _level(SETTINGS.load()["device"], profile)
-    spec = GAMES.get(appid, {}).get("profiles", {}).get(profile, {})
+    device = SETTINGS.load()["device"]
+    level, approx = _level(device, profile)
+    # This device's profiles, else the ones borrowed from the device the user picked.
+    spec = games.profiles_for(GAMES.get(appid), device, profile_device).get(profile, {})
     entry = STATE.load()["games"].get(key)
     # Keys Loadout wrote before (e.g. a resolution from 0.3.0) and the new profile doesn't set
     # are restored to their originals here.
@@ -88,12 +94,20 @@ class Plugin:
         SETTINGS.save(s)
         return s
 
-    async def plan_profile(self, appid, profile, current, fps_cap=True):
-        return _plan(appid, profile, current, fps_cap).to_dict()
+    async def reset_settings(self):
+        """Back to first run (Setup asks for the device again). The frontend applies Default to every
+        game with a profile first; backups in STATE stay for any game it couldn't restore."""
+        s = _default_settings()
+        SETTINGS.save(s)
+        decky.logger.info("settings reset")
+        return s
 
-    async def apply_profile(self, appid, profile, current, fps_cap=True):
+    async def plan_profile(self, appid, profile, current, fps_cap=True, profile_device=None):
+        return _plan(appid, profile, current, fps_cap, profile_device).to_dict()
+
+    async def apply_profile(self, appid, profile, current, fps_cap=True, profile_device=None):
         """Records state and returns the launch options the frontend must write."""
-        plan = _plan(appid, profile, current, fps_cap)
+        plan = _plan(appid, profile, current, fps_cap, profile_device)
         key = str(appid)
         if plan.blocked:
             return {"launch_options": current, "warnings": list(plan.warnings), "applied": False}
@@ -106,7 +120,8 @@ class Plugin:
                                    "files": plan.file_state}
         STATE.save(state)
         s = SETTINGS.load()
-        s["games"].setdefault(key, {"profile": "default"}).update(profile=profile, fps_cap=fps_cap)
+        s["games"].setdefault(key, {"profile": "default"}).update(profile=profile, fps_cap=fps_cap,
+                                                                 profile_device=profile_device)
         s["last_game"] = appid
         SETTINGS.save(s)
         decky.logger.info(f"applied {profile} to {appid}")
