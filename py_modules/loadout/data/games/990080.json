@@ -22,6 +22,7 @@
       "verified": { "proton": "default", "date": "2026-10-26" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -43,6 +44,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -64,27 +66,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "0",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.VolumetricsQuality": "0",
-                "[ScalabilityGroups]sg.SkyQuality": "0",
-                "[ScalabilityGroups]sg.PopulationQuality": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -111,6 +93,7 @@
       "verified": { "proton": "default", "date": "2026-10-26" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -132,6 +115,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -153,27 +137,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "0",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.VolumetricsQuality": "0",
-                "[ScalabilityGroups]sg.SkyQuality": "0",
-                "[ScalabilityGroups]sg.PopulationQuality": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -200,6 +164,7 @@
       "verified": { "proton": "default", "date": "2026-10-26" },
       "profiles": {
         "quality": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -221,6 +186,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -242,27 +208,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "3",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "0",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.VolumetricsQuality": "0",
-                "[ScalabilityGroups]sg.SkyQuality": "0",
-                "[ScalabilityGroups]sg.PopulationQuality": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/AppData/Local/Hogwarts Legacy/Saved/Config/WindowsNoEditor/GameUserSettings.ini",

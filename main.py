@@ -11,18 +11,25 @@ from loadout.store import JsonStore  # noqa: E402
 from loadout.games import GAME_FILTERS  # noqa: E402
 from loadout.validate import PROFILES  # noqa: E402
 
+DEVICES = devices.load_devices()
+# Detected once, never asked: an undetected device uses the generic table (targets only; profiles
+# are borrowed per game with "Use profiles from"). No manual override: add one if a device turns out
+# to be detected wrong (e.g. a Legion Go without a valid product_name).
+DEVICE = devices.detect(DEVICES, devices.read_dmi()) or devices.GENERIC
+
+
 # Intent only (forward-compatible, later the export format). Backups live in STATE.
 def _default_settings():
     return {
-        "schema_version": 1, "device": None, "global_profile": None, "games": {},
-        "game_filter": "verified",
+        "schema_version": 1, "global_profile": None, "games": {},
+        # No game has generic profiles, so "verified" would list nothing there.
+        "game_filter": "loadout" if DEVICE == devices.GENERIC else "verified",
         "last_game": None,  # last game a profile was applied to: selected when the QAM opens
     }
 
 
 SETTINGS = JsonStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "settings.json", _default_settings())
 STATE = JsonStore(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / "state.json", {"schema_version": 1, "games": {}})
-DEVICES = devices.load_devices()
 GAMES = games.load_games()
 
 
@@ -33,50 +40,46 @@ def _check_appid(appid):
 
 
 def _ctx(appid):
-    root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
-    return steam.app_paths(root, appid) if root else None
+    home = Path(decky.DECKY_USER_HOME)
+    root = steam.find_steam_root(home)
+    paths = steam.app_paths(root, appid) if root else None
+    # Native Linux games keep their settings in ~/.local/share (files.allowed keeps Steam's folder out).
+    return {**paths, "xdg_data": str(home / ".local/share")} if paths else None
 
 
-def _level(device, profile):
-    dev = DEVICES.get(device or "") or DEVICES[devices.GENERIC]
-    return devices.resolve_level(DEVICES, device, profile, devices.native_class(dev))
+def _level(profile):
+    return devices.resolve_level(DEVICES, DEVICE, profile, devices.native_class(DEVICES[DEVICE]))
 
 
-def _plan(appid, profile, current, fps_cap, profile_device):
+def _plan(appid, profile, current, profile_device):
     key = _check_appid(appid)
     if not isinstance(current, str) or len(current) > 4096:
         raise ValueError("invalid launch options")
-    if type(fps_cap) is not bool:
-        raise ValueError("invalid fps_cap")
-    device = SETTINGS.load()["device"]
-    level, approx = _level(device, profile)
+    level, approx = _level(profile)
     # This device's profiles, else the ones borrowed from the device the user picked.
-    spec = games.profiles_for(GAMES.get(appid), device, profile_device).get(profile, {})
+    spec = games.profile_spec(GAMES.get(appid), DEVICE, profile_device, profile)
     entry = STATE.load()["games"].get(key)
     # Keys Loadout wrote before (e.g. a resolution from 0.3.0) and the new profile doesn't set
     # are restored to their originals here.
     file_plan = files.plan_files(spec.get("files", []), _ctx(appid), (entry or {}).get("files", {}))
     return planner.build_plan(appid, profile, current, entry, level, approx, spec.get("env"), file_plan,
-                              tuple(spec.get("args", ())), fps_cap)
+                              tuple(spec.get("args", ())))
 
 
 class Plugin:
     async def get_bootstrap(self):
-        detected = devices.detect(DEVICES, devices.read_dmi())
-        s = SETTINGS.load()
         return {
-            "settings": s,
-            # Each profile's FPS cap on the configured device, for the cap switch's label.
-            "fps_limits": {p: _level(s["device"], p)[0].get("fps_limit") for p in PROFILES},
-            "detected": detected,
-            "devices": [{"id": d["device"], "name": d["name"], "native": devices.native_class(d)}
-                        for d in DEVICES.values()],
+            "settings": SETTINGS.load(),
+            "device": DEVICE,
+            # Each profile's target FPS on this device: shown, the user sets Steam's frame limit.
+            "fps_targets": {p: _level(p)[0].get("fps_limit") for p in PROFILES},
+            "devices": [{"id": d["device"], "name": d["name"]} for d in DEVICES.values()],
         }
 
     async def list_games(self):
         root = steam.find_steam_root(Path(decky.DECKY_USER_HOME))
         installed = steam.list_games(root) if root else []
-        return games.annotate(installed, GAMES, STATE.load()["games"], SETTINGS.load()["device"])
+        return games.annotate(installed, GAMES, STATE.load()["games"], DEVICE)
 
     async def set_game_filter(self, game_filter):
         if game_filter not in GAME_FILTERS:
@@ -86,28 +89,20 @@ class Plugin:
         SETTINGS.save(s)
         return s
 
-    async def save_settings(self, device):
-        if device not in DEVICES:
-            raise ValueError("invalid device")
-        s = SETTINGS.load()
-        s["device"] = device
-        SETTINGS.save(s)
-        return s
-
     async def reset_settings(self):
-        """Back to first run (Setup asks for the device again). The frontend applies Default to every
-        game with a profile first; backups in STATE stay for any game it couldn't restore."""
+        """Back to first run. The frontend applies Default to every game with a profile first;
+        backups in STATE stay for any game it couldn't restore."""
         s = _default_settings()
         SETTINGS.save(s)
         decky.logger.info("settings reset")
         return s
 
-    async def plan_profile(self, appid, profile, current, fps_cap=True, profile_device=None):
-        return _plan(appid, profile, current, fps_cap, profile_device).to_dict()
+    async def plan_profile(self, appid, profile, current, profile_device=None):
+        return _plan(appid, profile, current, profile_device).to_dict()
 
-    async def apply_profile(self, appid, profile, current, fps_cap=True, profile_device=None):
+    async def apply_profile(self, appid, profile, current, profile_device=None):
         """Records state and returns the launch options the frontend must write."""
-        plan = _plan(appid, profile, current, fps_cap, profile_device)
+        plan = _plan(appid, profile, current, profile_device)
         key = str(appid)
         if plan.blocked:
             return {"launch_options": current, "warnings": list(plan.warnings), "applied": False}
@@ -120,8 +115,7 @@ class Plugin:
                                    "files": plan.file_state}
         STATE.save(state)
         s = SETTINGS.load()
-        s["games"].setdefault(key, {"profile": "default"}).update(profile=profile, fps_cap=fps_cap,
-                                                                 profile_device=profile_device)
+        s["games"].setdefault(key, {"profile": "default"}).update(profile=profile, profile_device=profile_device)
         s["last_game"] = appid
         SETTINGS.save(s)
         decky.logger.info(f"applied {profile} to {appid}")

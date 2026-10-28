@@ -705,3 +705,135 @@ def test_cyberpunk_profiles_round_trip(tmp_path):
     assert changed["name=TextureQuality]/value"] == "Low" and changed["name=TextureQuality]/index"] == "0"
     apply([], ctx, plan.state)
     assert cfg.read_bytes() == raw
+
+
+# --- LSX handler (Larian) --------------------------------------------------
+
+from loadout import lsxcfg  # noqa: E402
+
+
+def _entry(key, value, vtype="int32", type_="0"):
+    return (f'                <node id="ConfigEntry">\n'
+            f'                    <attribute id="MapKey" type="FixedString" value="{key}"/>\n'
+            f'                    <attribute id="Type" type="int32" value="{type_}"/>\n'
+            f'                    <attribute id="Value" type="{vtype}" value="{value}"/>\n'
+            f'                </node>\n').encode()
+
+
+# Same bytes as Baldur's Gate 3's graphicSettings.lsx (native Linux, ROG Xbox Ally, Low preset),
+# fewer entries: UTF-8 without BOM, LF, 4-space indent, entries in MapKey order, final newline.
+LSX_HEAD = (b'<?xml version="1.0" encoding="UTF-8"?>\n<save>\n'
+            b'    <version major="4" minor="8" revision="0" build="700"/>\n'
+            b'    <region id="Config">\n        <node id="root">\n'
+            b'            <attribute id="Version64" type="int64" value="36169534507319298"/>\n'
+            b'            <children>\n')
+LSX_TAIL = b'            </children>\n        </node>\n    </region>\n</save>\n'
+LSX = (LSX_HEAD + _entry("AnimationLODDetail", "2") + _entry("CurrentSettings", "Low", "LSString", "1")
+       + _entry("SSAOEnabled", "0") + _entry("ShadowQuality", "2")
+       + _entry("UpscaleSharpness", "0.80000001", "float", "2") + LSX_TAIL)
+
+
+def test_lsx_reads_values_and_absent_keys():
+    assert lsxcfg.read_values(LSX, ["ShadowQuality", "CurrentSettings", "UpscaleSharpness", "FogQuality"]) == {
+        "ShadowQuality": "2", "CurrentSettings": "Low", "UpscaleSharpness": "0.80000001", "FogQuality": None}
+
+
+def test_lsx_set_changes_only_the_value():
+    out = lsxcfg.set_values(LSX, {"ShadowQuality": "1"})
+    assert out == LSX.replace(_entry("ShadowQuality", "2"), _entry("ShadowQuality", "1"))
+
+
+def test_lsx_none_removes_the_entry_and_adding_it_back_restores_the_bytes():
+    removed = lsxcfg.set_values(LSX, {"SSAOEnabled": None})
+    assert removed == LSX.replace(_entry("SSAOEnabled", "0"), b"")
+    assert lsxcfg.read_values(removed, ["SSAOEnabled"]) == {"SSAOEnabled": None}
+    assert lsxcfg.set_values(removed, {"SSAOEnabled": "0"}) == LSX  # same place, same format
+    assert lsxcfg.set_values(LSX, {"FogQuality": None}) == LSX  # already absent
+
+
+def test_lsx_adds_missing_keys_in_mapkey_order():
+    out = lsxcfg.set_values(LSX, {"AntiAliasing": "0", "VSync": "0", "BloomEnabled": "0"})
+    assert out == (LSX_HEAD + _entry("AnimationLODDetail", "2") + _entry("AntiAliasing", "0")
+                   + _entry("BloomEnabled", "0") + _entry("CurrentSettings", "Low", "LSString", "1")
+                   + _entry("SSAOEnabled", "0") + _entry("ShadowQuality", "2")
+                   + _entry("UpscaleSharpness", "0.80000001", "float", "2") + _entry("VSync", "0") + LSX_TAIL)
+
+
+@pytest.mark.parametrize("values", [
+    {"FogQuality": "Low"}, {"FogQuality": "0.5"},  # only int32 entries are added
+    {"ShadowQuality": '1"/><x a="'}, {"ShadowQuality": "<"}, {"ShadowQuality": "1&amp;"},
+    {"Bad Key": "1"}, {"../x": "1"}, {"": "1"},
+])
+def test_lsx_rejects_bad_values_and_keys(values):
+    with pytest.raises(ValueError):
+        lsxcfg.set_values(LSX, values)
+
+
+@pytest.mark.parametrize("raw", [
+    LSX.replace(_entry("ShadowQuality", "2"), _entry("SSAOEnabled", "1")),  # duplicated MapKey
+    LSX.replace(_entry("ShadowQuality", "2"), _entry("ShadowQuality", "2").replace(
+        b'                    <attribute id="Value" type="int32" value="2"/>\n', b"")),  # entry without a Value
+    LSX.replace(b'<attribute id="Value" type="int32" value="0"/>',
+                b'<attribute id="Extra" type="int32" value="0"/><attribute id="Value" type="int32" value="0"/>'),
+    LSX[:-30],  # truncated file
+    LSX_HEAD + LSX_TAIL,  # no entries: nothing to copy the layout from
+    b"\xff\xfe\x00<",
+])
+def test_lsx_refuses_unexpected_files(raw):
+    assert raw != LSX
+    with pytest.raises(ValueError):
+        lsxcfg.read_values(raw, ["ShadowQuality"])
+
+
+BG3_PATH = "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx"
+
+
+def native_ctx(tmp_path):
+    ctx = ctx_for(tmp_path)
+    ctx["xdg_data"] = str(tmp_path / "share")
+    cfg = tmp_path / "share/Larian Studios/Baldur's Gate 3/graphicSettings.lsx"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(LSX)
+    return ctx, cfg
+
+
+def test_lsx_profile_and_default_round_trip_in_xdg_data(tmp_path):
+    ctx, cfg = native_ctx(tmp_path)
+    spec = [{"path": BG3_PATH, "format": "lsx", "set": {"ShadowQuality": "1", "SSAOEnabled": None, "VSync": "0"}}]
+    plan = files.plan_files(spec, ctx, {})
+    assert plan.error is None
+    assert sorted((c.key, c.old, c.new) for c in plan.changes) == [
+        ("SSAOEnabled", "0", None), ("ShadowQuality", "2", "1"), ("VSync", None, "0")]
+    files.apply_writes(plan.writes)
+    assert lsxcfg.read_values(cfg.read_bytes(), ["ShadowQuality", "SSAOEnabled", "VSync"]) == {
+        "ShadowQuality": "1", "SSAOEnabled": None, "VSync": "0"}
+    # Default: every key back, the added one removed, the removed one added back.
+    restore = files.plan_files([], ctx, plan.state)
+    files.apply_writes(restore.writes)
+    assert cfg.read_bytes() == LSX
+
+
+@pytest.mark.parametrize("path", [
+    "{xdg_data}/Steam/config/x.lsx",  # Steam's own folder under ~/.local/share
+    "{xdg_data}/Steam/steamapps/common/Other/x.lsx",
+])
+def test_xdg_data_keeps_steams_folder_out(tmp_path, path):
+    ctx, _ = native_ctx(tmp_path)
+    plan = files.plan_files([{"path": path, "format": "lsx", "set": {"A": "1"}}], ctx, {})
+    assert plan.error and "Unsafe" in plan.error
+
+
+def test_xdg_data_symlink_out_is_refused(tmp_path):
+    ctx, cfg = native_ctx(tmp_path)
+    outside = tmp_path / "outside.lsx"
+    outside.write_bytes(LSX)
+    link = cfg.parent / "link.lsx"
+    link.symlink_to(outside)
+    plan = files.plan_files([{"path": "{xdg_data}/Larian Studios/Baldur's Gate 3/link.lsx", "format": "lsx",
+                              "set": {"ShadowQuality": "1"}}], ctx, {})
+    assert plan.error and "Unsafe" in plan.error
+
+
+def test_xdg_data_path_needs_the_token_in_context(tmp_path):
+    plan = files.plan_files([{"path": BG3_PATH, "format": "lsx", "set": {"A": "1"}}], ctx_for(tmp_path), {})
+    assert plan.error and "Unsafe" in plan.error

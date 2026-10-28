@@ -1,6 +1,7 @@
 import {
   ButtonItem,
   ConfirmModal,
+  DialogButton,
   DropdownItem,
   Field,
   PanelSection,
@@ -8,11 +9,10 @@ import {
   showModal,
   staticClasses,
   TextField,
-  ToggleField,
 } from "@decky/ui";
 import { definePlugin, toaster } from "@decky/api";
 import { ReactNode, useEffect, useState } from "react";
-import { FaSlidersH } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaSlidersH } from "react-icons/fa";
 import * as api from "./api";
 
 
@@ -21,9 +21,9 @@ const profileLabel = (id: string | null) => api.PROFILES.find((p) => p.id === id
 // Cumulative filters: each one also shows what the previous one does.
 const FILTERS: { id: api.GameFilter; label: string; keep: (g: api.Game) => boolean }[] = [
   { id: "verified", label: "Verified on this device", keep: (g) => g.verified },
-  // Games with a Loadout entry, plus any game Loadout is managing (a profile applied, even generic).
+  // Games with a Loadout entry, plus any game with a profile applied (e.g. a cap from 0.5.0 or
+  // older on a game without an entry), so Default stays reachable.
   { id: "loadout", label: "All Loadout games", keep: (g) => g.supported || !!g.profile },
-  { id: "all", label: "All games", keep: () => true },
 ];
 
 // Hundreds of games (installed, or verified once the data grows) make a dropdown nobody can scroll
@@ -50,13 +50,13 @@ function Notice({ color, children }: { color: string; children: ReactNode }) {
 // What a profile does on the selected game (the list's "(other devices)" / "(generic)" marks).
 function gameNote(g: api.Game | undefined) {
   if (!g) return undefined;
-  if (!g.supported) return "Generic: no Loadout settings for this game, profiles only set the FPS cap.";
+  if (!g.supported) return "No Loadout settings for this game: apply Default (original) to remove the FPS cap an older Loadout set.";
   if (!g.verified) return "Other devices: Loadout has profiles for this game, not for this device yet.";
   return undefined;
 }
 
 function gameLabel(g: api.Game) {
-  const kind = !g.supported ? " (generic)" : g.verified ? "" : " (other devices)";
+  const kind = !g.supported ? " (no settings)" : g.verified ? "" : " (other devices)";
   return `${g.name}${kind}${g.profile ? ` · ${profileLabel(g.profile)}` : ""}`;
 }
 
@@ -92,50 +92,61 @@ function report(ok: boolean, text: string) {
 
 const reportError = (e: unknown) => report(false, String(e));
 
-function describe(plan: api.Plan, running: boolean) {
+// The technical diff (env vars, file keys, launch options), folded under the summary: most people
+// only need the summary, but what changes stays one press away. Modal content is its own tree (the
+// QAM panel's remounts don't reach it), so plain useState is fine here.
+function Details({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <DialogButton onClick={() => setOpen(!open)}
+        style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>{open ? "Hide details" : "Show details"}</span>
+        {open ? <FaChevronUp /> : <FaChevronDown />}
+      </DialogButton>
+      {open && <div style={{ marginTop: 8 }}>{children}</div>}
+    </>
+  );
+}
+
+// target: e.g. "40 FPS at 1280×720", what the profile was made for (undefined: no profile applies).
+function describe(plan: api.Plan, running: boolean, target?: string) {
   const env = plan.changes.filter((c) => c.kind === "env");
   const args = plan.changes.filter((c) => c.kind === "arg");
   const launch = plan.changes.find((c) => c.kind === "launch_option");
   const fileKeys = plan.changes.filter((c) => c.kind === "file_key");
+  const summary = !plan.changes.length ? ["Nothing to change."]
+    : plan.profile === "default" ? ["Restores your original game settings and launch options."]
+    : [
+      ...(fileKeys.length ? [`Game settings: ${fileKeys.length} changed`] : []),
+      ...(target ? [`Target: ${target}. Set the frame limit in Steam's Quick Access Menu and the resolution in the game's menu.`] : []),
+    ];
   return (
-    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-      {env.map((c) => <div key={c.key}>{c.key} = {c.new}</div>)}
-      {args.map((c) => <div key={c.key}>Game argument: {c.key}</div>)}
-      {fileKeys.length > 0 && <div style={{ marginTop: 8 }}>Game settings ({fileKeys[0].target.split("/").pop()}):</div>}
-      {fileKeys.map((c) => <div key={c.target + c.key}>{c.key}: {c.old} → {c.new}</div>)}
-      {launch ? (
-        <>
-          <div style={{ marginTop: 8 }}>Launch options before:</div>
-          <code>{launch.old || "(empty)"}</code>
-          <div style={{ marginTop: 8 }}>After:</div>
-          <code>{launch.new || "(empty)"}</code>
-        </>
-      ) : <div>Nothing to change.</div>}
-      {plan.warnings.map((w) => <div key={w} style={{ marginTop: 8, color: "#e8a33d" }}>{w}</div>)}
-      {running && <div style={{ marginTop: 8, color: "#e8a33d" }}>Close the game first: it would overwrite its settings on exit.</div>}
+    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+      {summary.map((line) => <div key={line}>• {line}</div>)}
       <div style={{ marginTop: 8 }}>Changes apply the next time the game is launched.</div>
+      {plan.warnings.map((w) => <div key={w} style={{ marginTop: 8, color: AMBER }}>{w}</div>)}
+      {running && <div style={{ marginTop: 8, color: AMBER }}>Close the game first: it would overwrite its settings on exit.</div>}
+      {plan.changes.length > 0 && (
+        <Details>
+          <div style={{ wordBreak: "break-all", fontSize: 12 }}>
+            {env.map((c) => <div key={c.key}>{c.key} = {c.new}</div>)}
+            {args.map((c) => <div key={c.key}>Game argument: {c.key}</div>)}
+            {fileKeys.length > 0 && <div style={{ marginTop: 8 }}>Game settings ({fileKeys[0].target.split("/").pop()}):</div>}
+            {fileKeys.map((c) => <div key={c.target + c.key}>
+              {c.key}: {c.old ?? "(game default)"} → {c.new ?? "(game default)"}</div>)}
+            {launch && (
+              <>
+                <div style={{ marginTop: 8 }}>Launch options before:</div>
+                <code>{launch.old || "(empty)"}</code>
+                <div style={{ marginTop: 8 }}>After:</div>
+                <code>{launch.new || "(empty)"}</code>
+              </>
+            )}
+          </div>
+        </Details>
+      )}
     </div>
-  );
-}
-
-function Onboarding({ boot, onDone }: { boot: api.Bootstrap; onDone: (s: api.Settings) => void }) {
-  const [device, setDevice] = useKept("setup.device", boot.detected ?? "generic");
-  const detectedName = boot.devices.find((d) => d.id === boot.detected)?.name;
-  return (
-    <PanelSection title="Setup">
-      <PanelSectionRow>
-        <div>{detectedName ? `Detected ${detectedName}. Is that right?` : "Device not detected, pick one:"}</div>
-      </PanelSectionRow>
-      <PanelSectionRow>
-        <DropdownItem layout="below" label="Device" rgOptions={boot.devices.map((d) => ({ data: d.id, label: d.name }))}
-          selectedOption={device} onChange={(o) => setDevice(o.data)} />
-      </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem layout="below" onClick={() => api.saveSettings(device).then(onDone, reportError)}>
-          Confirm
-        </ButtonItem>
-      </PanelSectionRow>
-    </PanelSection>
   );
 }
 
@@ -147,7 +158,7 @@ function Content() {
   const [busy, setBusy] = useKept("busy", false);
   const [loadError, setLoadError] = useKept<string | undefined>("loadError", undefined);
   const [status] = useKept<Status | undefined>("status", undefined);
-  // Remounts the cap switch and the device pick after a cancelled confirm, so they show the saved value again.
+  // Remounts the device pick after a cancelled confirm, so it shows the saved value again.
   const [pickTick, setPickTick] = useKept("pickTick", 0);
   const filter = FILTERS.find((f) => f.id === settings?.game_filter) ?? FILTERS[0];
   const [search, setSearch] = useKept("search", "");
@@ -199,43 +210,45 @@ function Content() {
     );
   }
   if (!boot || !settings) return <PanelSection><PanelSectionRow>Loading…</PanelSectionRow></PanelSection>;
-  if (!settings.device) {
-    // Games (verified on this device) and FPS caps were loaded without a device: reload them for it.
-    const done = async (s: api.Settings) => {
-      setSettings(s);
-      setKept("status", undefined);
-      setBoot(await api.getBootstrap());
-      setGames(await api.listGames());
-    };
-    return <Onboarding boot={boot} onDone={(s) => done(s).catch(reportError)} />;
-  }
 
   const game = selected !== undefined ? settings.games[String(selected)] : undefined;
   const info = games.find((g) => g.appid === selected);
   const current: api.Profile = game?.profile ?? "default";
-  const fpsCap = game?.fps_cap ?? true;
-  const currentCap = boot.fps_limits?.[current];
   const profileDevice = game?.profile_device ?? null;
   const deviceName = (id: string) => boot.devices.find((d) => d.id === id)?.name ?? id;
+  // What a profile was made for: the device's target FPS (Steam's frame limit is the user's) and the
+  // resolution from the block whose profiles apply (this device's, else the borrowed one).
+  const profilesFrom = (from: string | null) => info?.profiles?.[(info.verified ? boot.device : from) ?? ""] ?? {};
+  const target = (profile: api.Profile, from: string | null) => {
+    const profiles = profilesFrom(from);
+    if (profile === "default" || !(profile in profiles)) return undefined;
+    const fps = boot.fps_targets?.[profile];
+    const res = profiles[profile]?.replace("x", "×");
+    return `${fps ? `${fps} FPS` : "no frame limit"}${res ? ` at ${res}` : ""}`;
+  };
+  const currentTarget = target(current, profileDevice);
+  // Only the profiles the device's (or borrowed) block has: one it can't hold the target with is left
+  // out of the data. The applied one stays listed so the dropdown still shows it.
+  const shown = api.PROFILES.filter((p) => p.id === "default" || p.id === current || p.id in profilesFrom(profileDevice));
 
-  const pick = async (profile: api.Profile, cap = fpsCap, from = profileDevice) => {
+  const pick = async (profile: api.Profile, from = profileDevice) => {
     if (selected === undefined || busy) return;
     setBusy(true);
     try {
       const before = await api.getLaunchOptions(selected);
-      const plan = await api.planProfile(selected, profile, before, cap, from);
+      const plan = await api.planProfile(selected, profile, before, from);
       // Game config files are never written while the game runs (many games rewrite them on exit).
       const running = plan.file_writes.length > 0 && window.SteamUIStore?.MainRunningAppID === selected;
       showModal(
         <ConfirmModal
           strTitle={`Apply ${api.PROFILES.find((p) => p.id === profile)?.label}?`}
-          strDescription={describe(plan, running)}
+          strDescription={describe(plan, running, target(profile, from))}
           bOKDisabled={plan.blocked || running}
           onCancel={() => setPickTick(pickTick + 1)}
           onOK={async () => {
             try {
               // Re-read: the user may have edited launch options while the dialog was open.
-              const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected), cap, from);
+              const result = await api.applyProfile(selected, profile, await api.getLaunchOptions(selected), from);
               if (!result.applied) {
                 reportError(result.warnings.join(" "));
                 return;
@@ -259,7 +272,7 @@ function Content() {
     }
   };
 
-  // Default on every game with a profile, then back to Setup. Stops (settings kept) at the first
+  // Default on every game with a profile, then settings cleared. Stops (settings kept) at the first
   // game that can't be restored, so nothing is left half-reset without the user knowing.
   const reset = () => {
     const applied = games.filter((g) => g.profile);
@@ -277,7 +290,7 @@ function Content() {
                   Loadout changed: {named.map((g) => `${g.name} (${profileLabel(g.profile)})`).join(", ")}
                   {more > 0 ? `, and ${more} more` : ""}.</div>
               : <div>No game has a profile applied.</div>}
-            <div style={{ marginTop: 8 }}>Then all Loadout settings are cleared and Setup asks for your device again.</div>
+            <div style={{ marginTop: 8 }}>Then all Loadout settings are cleared.</div>
             {open && <div style={{ marginTop: 8, color: AMBER }}>Close {open.name} first: it would overwrite its settings on exit.</div>}
           </div>
         }
@@ -291,7 +304,7 @@ function Content() {
               setKept("status", { ok: true, text: `Resetting ${i + 1} of ${applied.length}: ${g.name}…` } satisfies Status);
               const s = settings.games[String(g.appid)];
               const result = await api.applyProfile(g.appid, "default", await api.getLaunchOptions(g.appid),
-                s?.fps_cap ?? true, s?.profile_device ?? null);
+                s?.profile_device ?? null);
               if (!result.applied) {
                 reportError(`${g.name}: ${result.warnings.join(" ")} Nothing else was reset.`);
                 return;
@@ -301,7 +314,8 @@ function Content() {
             setSettings(await api.resetSettings());
             setBoot(await api.getBootstrap());
             setAppid(undefined);
-            report(true, "Loadout reset. Pick your device to start again.");
+            setGames(await api.listGames());
+            report(true, "Loadout reset.");
           } catch (e) {
             reportError(e);
           } finally {
@@ -312,13 +326,12 @@ function Content() {
     );
   };
 
-  // Picked once in Setup: another device's profiles are borrowed per game ("Use profiles from"), so
-  // it's shown, not switched; Reset Loadout redoes Setup.
+  // Detected, not picked: another device's profiles are borrowed per game ("Use profiles from").
   return (
     <>
       <PanelSection title="Game">
         <PanelSectionRow>
-          <Field label="Device">{deviceName(settings.device)}</Field>
+          <Field label="Device">{deviceName(boot.device)}</Field>
         </PanelSectionRow>
         <PanelSectionRow>
           <DropdownItem layout="below" label="Show" rgOptions={FILTERS.map((f) => ({ data: f.id, label: f.label }))}
@@ -352,37 +365,29 @@ function Content() {
             <Notice color={AMBER}>
               Profiles applied to hidden games:{" "}
               {hiddenApplied.map((g) => `${g.name} (${profileLabel(g.profile)})`).join(", ")}.
-              Show "All games" to change them.
+              Show "All Loadout games" to change them.
             </Notice>
           </PanelSectionRow>
         )}
         {/* No profiles for this device: borrow another device's (e.g. one with a similar chip).
-            Picking re-applies the current profile, confirmed like the cap switch. */}
+            Picking re-applies the current profile (confirmed like any apply). */}
         {info?.supported && !info.verified && (
           <PanelSectionRow>
             <DropdownItem key={pickTick} layout="below" label="Use profiles from" disabled={busy}
               description="No Loadout profiles for your device yet. Pick a device with a similar chip."
-              rgOptions={[{ data: null, label: "None (FPS cap only)" },
+              rgOptions={[{ data: null, label: "None" },
                 ...info.devices.map((d) => ({ data: d, label: deviceName(d) }))]}
               selectedOption={info.devices.includes(profileDevice ?? "") ? profileDevice : null}
-              onChange={(o) => pick(current, fpsCap, o.data)} />
+              onChange={(o) => pick(current in profilesFrom(o.data) ? current : "default", o.data)} />
           </PanelSectionRow>
         )}
         <PanelSectionRow>
           <DropdownItem layout="below" label="Profile" disabled={selected === undefined || busy}
-            rgOptions={api.PROFILES.map((p) => ({ data: p.id, label: p.label }))}
+            description={currentTarget &&
+              `Made for ${currentTarget}: set the frame limit in Steam's Quick Access Menu and the resolution in the game's menu.`}
+            rgOptions={shown.map((p) => ({ data: p.id, label: p.label }))}
             selectedOption={current} onChange={(o) => pick(o.data)} />
         </PanelSectionRow>
-        {/* Off: cap with Steam's own limiter in the QAM, changeable without leaving the game.
-            Switching re-applies the current profile (confirmed like any apply; cancel keeps it). */}
-        {currentCap && (
-          <PanelSectionRow>
-            <ToggleField key={pickTick} label={`Apply the profile's ${currentCap} FPS cap`} checked={fpsCap}
-              disabled={busy}
-              description="On: keep Steam's frame limit off. Off: set it in the Quick Access Menu."
-              onChange={(on) => pick(current, on)} />
-          </PanelSectionRow>
-        )}
         {status && (
           <PanelSectionRow>
             <Notice color={status.ok ? GREEN : AMBER}>
@@ -394,7 +399,7 @@ function Content() {
       <PanelSection title="Settings">
         <PanelSectionRow>
           <ButtonItem layout="below" disabled={busy} onClick={reset}
-            description="Every game back to Default (original), then Setup again.">
+            description="Every game back to Default (original), Loadout's settings cleared.">
             Reset Loadout
           </ButtonItem>
         </PanelSectionRow>

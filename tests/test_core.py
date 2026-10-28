@@ -8,7 +8,7 @@ import pytest
 
 from loadout import devices, games, launch, planner, steam
 from loadout.store import JsonStore
-from loadout.validate import ValidationError, validate_device_doc, validate_env, validate_game_doc
+from loadout.validate import ValidationError, validate_device_doc, validate_env, validate_files, validate_game_doc
 
 
 class Game(IntEnum):
@@ -18,6 +18,7 @@ class Game(IntEnum):
     CYBERPUNK_2077 = 1091500
     HOGWARTS_LEGACY = 990080
     CRYSIS_3 = 2096610
+    BALDURS_GATE_3 = 1086940
 
 # --- env -------------------------------------------------------------------
 
@@ -91,23 +92,23 @@ def test_launch_lost_state_still_strips_block():
 # --- planner ---------------------------------------------------------------
 
 
-def _apply(current, entry, profile, fps=40):
-    plan = planner.build_plan(480, profile, current, entry, {"fps_limit": fps}, False)
+def _apply(current, entry, profile, env=None):
+    plan = planner.build_plan(480, profile, current, entry, {"fps_limit": 40}, False, env)
     return plan, {"original": plan.original, "written": plan.launch_options}
 
 
 def test_switching_profiles_never_stacks_and_default_restores():
-    p1, e1 = _apply("-novid", None, "performance", 60)
-    p2, e2 = _apply(p1.launch_options, e1, "quality", 30)
-    assert p2.launch_options.count("LOADOUT_BEGIN") == 1 and "=30" in p2.launch_options
-    assert "=60" not in p2.launch_options
+    p1, e1 = _apply("-novid", None, "performance", {"MESA_VK_WSI_PRESENT_MODE": "immediate"})
+    p2, e2 = _apply(p1.launch_options, e1, "quality", {"DXVK_ASYNC": "1"})
+    assert p2.launch_options.count("LOADOUT_BEGIN") == 1 and "DXVK_ASYNC=1" in p2.launch_options
+    assert "MESA_VK_WSI_PRESENT_MODE" not in p2.launch_options
     back, _ = _apply(p2.launch_options, e2, "default")
     assert back.launch_options == "-novid"
 
 
 def test_apply_twice_is_idempotent():
-    p1, e1 = _apply("", None, "quality")
-    p2, e2 = _apply(p1.launch_options, e1, "quality")
+    p1, e1 = _apply("", None, "quality", {"DXVK_ASYNC": "1"})
+    p2, e2 = _apply(p1.launch_options, e1, "quality", {"DXVK_ASYNC": "1"})
     assert p2.launch_options == p1.launch_options and e2 == e1 and p2.original == ""
 
 
@@ -122,38 +123,31 @@ def test_plan_blocked_on_corrupted_markers():
 
 def test_game_env_merges_and_overrides_device_env():
     level = {"fps_limit": 30, "env": {"DXVK_ASYNC": "1", "MESA_VK_WSI_PRESENT_MODE": "fifo"}}
-    game_env = {"MESA_VK_WSI_PRESENT_MODE": "immediate", "VKD3D_FRAME_RATE": "25"}
+    game_env = {"MESA_VK_WSI_PRESENT_MODE": "immediate"}
     plan = planner.build_plan(Game.ELDEN_RING, "quality", "", None, level, False, game_env)
     tokens = shlex.split(plan.launch_options)
     assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "DXVK_ASYNC=1" in tokens
-    assert "VKD3D_FRAME_RATE=25" in tokens and "DXVK_FRAME_RATE=30" in tokens
     assert planner.build_plan(Game.ELDEN_RING, "default", "", None, level, False, game_env).launch_options == ""
 
 
-def test_fps_cap_off_keeps_game_env_and_args():
-    """Cap switch off: the user caps with Steam's own limiter; the profile's own env/args stay."""
-    level = {"fps_limit": 30, "env": {"DXVK_ASYNC": "1"}}
-    plan = planner.build_plan(Game.ELDEN_RING, "quality", "-novid", None, level, False,
-                              {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, None, ("--launcher-skip",), fps_cap=False)
+def test_no_fps_cap_since_0_6_0():
+    """The frame limit is Steam's (Quick Access Menu): a level's fps_limit is only the target shown."""
+    plan = planner.build_plan(Game.ELDEN_RING, "balanced", "-novid", None, {"fps_limit": 40}, False,
+                              {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, None, ("--launcher-skip",))
     tokens = shlex.split(plan.launch_options)
     assert not any("FRAME_RATE" in t or "maxFrameRate" in t for t in tokens)
-    assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "DXVK_ASYNC=1" in tokens
-    assert "--launcher-skip" in tokens
+    assert "MESA_VK_WSI_PRESENT_MODE=immediate" in tokens and "--launcher-skip" in tokens
     # Nothing else to write (graphics-only entry): launch options stay exactly as they were.
-    assert planner.build_plan(Game.CRYSIS_3, "quality", "-novid", None, {"fps_limit": 30}, False,
-                              fps_cap=False).launch_options == "-novid"
+    assert planner.build_plan(Game.CRYSIS_3, "quality", "-novid", None, {"fps_limit": 30}, False).launch_options == "-novid"
 
 
-def test_fps_cap_reaches_current_dxvk_through_dxvk_config():
-    """Proton 11's DXVK ignores DXVK_FRAME_RATE; it reads maxFrameRate from DXVK_CONFIG."""
-    plan = planner.build_plan(Game.CRYSIS_3, "balanced", "-novid", None, {"fps_limit": 40}, False)
-    tokens = shlex.split(plan.launch_options)
-    assert "DXVK_CONFIG=dxgi.maxFrameRate=40;d3d9.maxFrameRate=40" in tokens
-    assert "DXVK_FRAME_RATE=40" in tokens and "VKD3D_FRAME_RATE=40" in tokens
-    # The ";" is quoted, so the shell doesn't split the line there; Default still restores exactly.
-    assert "'dxgi.maxFrameRate=40;d3d9.maxFrameRate=40'" in plan.launch_options
-    assert launch.restore(plan.launch_options, plan.launch_options, "-novid") == ("-novid", None)
-    assert "DXVK_CONFIG" not in planner.build_plan(Game.CRYSIS_3, "uncapped", "", None, {}, False).launch_options
+def test_cap_block_from_an_older_version_is_removed():
+    """0.5.0 wrote the cap into the launch options: the next apply (or Default) takes it out."""
+    old = ("LOADOUT_BEGIN=1 DXVK_FRAME_RATE=40 DXVK_CONFIG='dxgi.maxFrameRate=40;d3d9.maxFrameRate=40' "
+           "VKD3D_FRAME_RATE=40 LOADOUT_END=1 %command% -novid")
+    entry = {"original": "-novid", "written": old}
+    assert planner.build_plan(Game.CRYSIS_3, "quality", old, entry, {"fps_limit": 30}, False).launch_options == "-novid"
+    assert planner.build_plan(Game.CRYSIS_3, "default", old, entry, {}, False).launch_options == "-novid"
 
 # --- validation ------------------------------------------------------------
 
@@ -199,6 +193,25 @@ def _xml(path, fmt="xml", values=None):
     return {"path": path, "format": fmt, "set": {"A": "1"} if values is None else values}
 
 
+@pytest.mark.parametrize("spec", [
+    {"path": "{xdg_data}/L/graphicSettings.xml", "format": "lsx", "set": {"A": "1"}},  # lsx needs .lsx
+    {"path": "{xdg_data}/L/graphicSettings.lsx", "format": "xml", "set": {"A": "1"}},  # .lsx needs lsx
+    {"path": "{install_dir}/G.ini", "format": "ini", "set": {"[S]A": None}},  # null is lsx only
+    {"path": "{xdg_data}/L/g.lsx", "format": "lsx", "set": {"A": 1}},
+    {"path": "{home}/L/g.lsx", "format": "lsx", "set": {"A": "1"}},
+    {"path": "{xdg_data}/../g.lsx", "format": "lsx", "set": {"A": "1"}},
+])
+def test_lsx_file_specs_rejected(spec):
+    with pytest.raises(ValidationError):
+        validate_files([spec], "files")
+
+
+def test_lsx_file_spec_accepts_xdg_data_and_null():
+    spec = {"path": "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx", "format": "lsx",
+            "set": {"ShadowQuality": "2", "SSAOEnabled": None}}
+    assert validate_files([spec], "files") == [spec]
+
+
 TESTED = "rog-xbox-ally"  # the device the bundled entries were tested on
 
 
@@ -209,7 +222,7 @@ def _profiles(appid):
 def _game(profiles=None, options=None, **over):
     """A game doc with one device block; profiles/options go into it, the rest at the top level."""
     entry = {"source": "https://example.com/post", "verified": {"proton": "default", "date": "2026-10-24"},
-             "profiles": {"quality": {"launch": {"env": {"DXVK_ASYNC": "1"}}}, "uncapped": {}}
+             "profiles": {"quality": {"launch": {"env": {"DXVK_ASYNC": "1"}}}, "performance": {}}
              if profiles is None else profiles}
     doc = {"schema_version": 2, "appid": 480, "name": "Spacewar", "devices": {"steam-deck-lcd": entry}}
     if options is not None:
@@ -218,14 +231,35 @@ def _game(profiles=None, options=None, **over):
     return doc
 
 
+def test_uncapped_is_gone():
+    """Removed in 0.6.0 (no FPS cap: it was Performance again). Old data with it is refused."""
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(profiles={"uncapped": {}}))
+    with pytest.raises(ValidationError):
+        validate_device_doc(_device(levels={"uncapped": {"any": {}}}))
+    with pytest.raises(ValueError):
+        planner.build_plan(1, "uncapped", "", None, {}, False)
+
+
 def test_game_doc_valid():
     dev = validate_game_doc(_game())["devices"]["steam-deck-lcd"]
-    assert dev["profiles"] == {"quality": {"env": {"DXVK_ASYNC": "1"}, "args": [], "files": []},
-                               "uncapped": {"env": {}, "args": [], "files": []}}
+    assert dev["profiles"] == {"quality": {"resolution": None, "env": {"DXVK_ASYNC": "1"}, "args": [], "files": []},
+                               "performance": {"resolution": None, "env": {}, "args": [], "files": []}}
     assert dev["verified"] == {"proton": "default", "date": "2026-10-24"}
     bare = _game()
     del bare["devices"]["steam-deck-lcd"]["source"]
     assert validate_game_doc(bare)["devices"]["steam-deck-lcd"]["source"] is None
+
+
+def test_game_doc_profile_resolution_is_informative():
+    doc = validate_game_doc(_game(profiles={"performance": {"resolution": "1280x720"}}))
+    assert doc["devices"]["steam-deck-lcd"]["profiles"]["performance"]["resolution"] == "1280x720"
+
+
+@pytest.mark.parametrize("resolution", ["1280*720", "720p", "big", 1280, "", "0x0", "1280x720;reboot", None])
+def test_game_doc_profile_resolution_rejected(resolution):
+    with pytest.raises(ValidationError):
+        validate_game_doc(_game(profiles={"performance": {"resolution": resolution}}))
 
 
 def test_game_doc_devices_are_independent():
@@ -347,7 +381,10 @@ def test_game_file_name_must_match_appid(tmp_path):
 def test_annotate_marks_supported_verified_and_profile():
     installed = [{"appid": 1245620, "name": "ELDEN RING"}, {"appid": 1, "name": "Crysis 3"},
                  {"appid": 2, "name": "Lies of P"}]
-    docs = {1245620: {"devices": {"rog-xbox-ally": {}, "steam-deck-lcd": {}}}, 2: {"devices": {"legion-go": {}}}}
+    docs = {1245620: {"devices": {"rog-xbox-ally": {"profiles": {"performance": {"resolution": "1280x720"},
+                                                                "quality": {"resolution": None}}},
+                                  "steam-deck-lcd": {"profiles": {}}}},
+            2: {"devices": {"legion-go": {"profiles": {}}}}}
     applied = {"1": {"profile": "performance"}}
     rows = lambda device: [(g["supported"], g["verified"], g["profile"])
                            for g in games.annotate(installed, docs, applied, device)]
@@ -357,6 +394,10 @@ def test_annotate_marks_supported_verified_and_profile():
     assert rows(None)[0] == (True, False, None)
     assert [g["devices"] for g in games.annotate(installed, docs, applied, None)] == [
         ["rog-xbox-ally", "steam-deck-lcd"], [], ["legion-go"]]
+    # Only the profiles each block has (the panel hides the rest), with their resolution.
+    assert games.annotate(installed, docs, applied, None)[0]["profiles"] == {
+        "rog-xbox-ally": {"performance": "1280x720", "quality": None}, "steam-deck-lcd": {}}
+    assert games.annotate(installed, docs, applied, None)[1]["profiles"] == {}
 
 
 def test_profiles_for_borrows_only_when_the_device_has_none():
@@ -364,10 +405,28 @@ def test_profiles_for_borrows_only_when_the_device_has_none():
                        "rog-xbox-ally": {"profiles": {"quality": "ally"}}}}
     assert games.profiles_for(doc, "rog-xbox-ally", "steam-deck-lcd") == {"quality": "ally"}  # own wins
     assert games.profiles_for(doc, "legion-go", "steam-deck-lcd") == {"quality": "deck"}
-    assert games.profiles_for(doc, "legion-go", None) == {}  # FPS cap only
+    assert games.profiles_for(doc, "legion-go", None) == {}  # nothing to set until one is picked
     assert games.profiles_for(doc, None, None) == {}
     assert games.profiles_for(doc, "legion-go", "legion-go-s") == {}  # a device the entry doesn't have
-    assert games.profiles_for(None, "legion-go", "steam-deck-lcd") == {}  # no entry: generic
+    assert games.profiles_for(None, "legion-go", "steam-deck-lcd") == {}  # no entry
+
+
+def test_profile_spec_refuses_a_profile_the_device_leaves_out():
+    doc = {"devices": {"steam-deck-lcd": {"profiles": {"quality": {"env": {}}}},
+                       "rog-xbox-ally": {"profiles": {"quality": {"env": {}}, "balanced": {"env": {}}}}}}
+    assert games.profile_spec(doc, "rog-xbox-ally", None, "balanced") == {"env": {}}
+    assert games.profile_spec(doc, "legion-go", "rog-xbox-ally", "balanced") == {"env": {}}  # borrowed
+    for device, borrowed, profile in [("steam-deck-lcd", None, "balanced"), ("legion-go", None, "quality"),
+                                      ("legion-go", "steam-deck-lcd", "performance"), ("legion-go", None, "nope")]:
+        with pytest.raises(ValueError):
+            games.profile_spec(doc, device, borrowed, profile)
+    with pytest.raises(ValueError):
+        games.profile_spec(None, "rog-xbox-ally", None, "quality")  # no entry: Default only
+    # Default sets nothing, with or without profiles (it restores the originals).
+    assert games.profile_spec(doc, "legion-go", None, "default") == {}
+    assert games.profile_spec(None, None, None, "default") == {}
+    with pytest.raises(ValueError):
+        games.profile_spec(doc, "legion-go", "../x", "default")  # the borrowed id is still checked
 
 
 @pytest.mark.parametrize("bad", ["../x", "Steam Deck", "", 1, ["steam-deck-lcd"], {"a": 1}, "x" * 41])
@@ -376,13 +435,11 @@ def test_profiles_for_rejects_bad_profile_device(bad):
         games.profiles_for({"devices": {}}, "legion-go", bad)
 
 
-def test_elden_ring_performance_and_uncapped_use_lowest_settings():
-    doc = json.loads((games.DATA_DIR / f"{Game.ELDEN_RING.value}.json").read_text())
-    (path, options), = doc["options"].items()
-    for profile in ("performance", "uncapped"):
-        values = doc["devices"][TESTED]["profiles"][profile]["files"][0]["set"]
-        for key, accepted in options.items():
-            assert values[key] == accepted[0], (profile, key)  # option lists go lowest -> highest
+def test_elden_ring_is_quality_only():
+    """40 FPS costs too much image quality on these handhelds: Balanced/Performance/Uncapped were removed."""
+    for device, entry in games.load_games()[Game.ELDEN_RING]["devices"].items():
+        assert list(entry["profiles"]) == ["quality"], device
+        assert entry["profiles"]["quality"]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}
 
 
 def test_lies_of_p_profiles_match_the_tested_presets():
@@ -392,7 +449,6 @@ def test_lies_of_p_profiles_match_the_tested_presets():
         # Every profile: anisotropic at max, texture at medium, game's own FPS limit off.
         assert sg(p, "Anisotropy") == "3" and sg(p, "Texture") == "1"
         assert profiles[p]["[/Script/ProjectP.LGameUserSettings]FrameRateLimit"] == "0.000000"
-    assert profiles["performance"] == profiles["uncapped"]
     assert sg("performance", "Shadow") == "0" and sg("balanced", "ViewDistance") == "1"
     assert sg("balanced", "Shadow") == "0" and sg("quality", "Shadow") == "1"
 
@@ -403,14 +459,14 @@ def test_hogwarts_profiles_are_graphics_only():
         # The game reloads its upscaler/resolution section from its save: only scalability groups.
         assert all(k.startswith("[ScalabilityGroups]sg.") for k in values), p
         assert len(values) == 11 and values["[ScalabilityGroups]sg.AntiAliasingQuality"] == "3"
-    assert profiles["performance"] == profiles["uncapped"] == profiles["balanced"]
+    assert profiles["performance"] == profiles["balanced"]
     assert profiles["quality"]["[ScalabilityGroups]sg.ShadingQuality"] == "2"
 
 
 def test_crysis_3_profiles_follow_the_protondb_deck_reports():
     """Quality High (40 Hz with drops, so 30), Balanced Medium (45 Hz locked), Performance Low (60)."""
     profiles = _profiles(Game.CRYSIS_3)
-    levels = {"quality": "3", "balanced": "2", "performance": "1", "uncapped": "1"}
+    levels = {"quality": "3", "balanced": "2", "performance": "1"}
     for name, level in levels.items():
         values = profiles[name]["files"][0]["set"]
         specs = {k: v for k, v in values.items() if k.startswith("[]sys_spec_") and k != "[]sys_spec_TextureResolution"}
@@ -420,7 +476,20 @@ def test_crysis_3_profiles_follow_the_protondb_deck_reports():
         assert values["[]r_MotionBlurShutterSpeed"] == "0", name  # Disabled
         # The game reloads these from its encrypted profile on launch: set in the menu instead.
         assert "[]sys_spec_raytracing" not in values and "[]r_AntialiasingMode" not in values, name
-    assert profiles["performance"] == profiles["uncapped"]
+
+
+def test_bundled_bg3_is_native_and_quality_only():
+    """Native Linux (settings in ~/.local/share); the handhelds don't hold 40 in Act 3, so only Quality (30)."""
+    doc = games.load_games()[Game.BALDURS_GATE_3]
+    for device, entry in doc["devices"].items():
+        assert list(entry["profiles"]) == ["quality"], device
+        (f,) = entry["profiles"]["quality"]["files"]
+        assert f["path"].startswith("{xdg_data}/") and f["format"] == "lsx"
+        # FSR 2.2 Quality (the game then writes AntiAliasing 0); frame cap off is the game's default,
+        # which it doesn't write: removed, so Steam's limiter is the only one.
+        assert (f["set"]["ResolutionUpscaleType"], f["set"]["FSR2Mode"], f["set"]["AntiAliasing"]) == ("2", "0", "0")
+        assert f["set"]["FrameCapEnabled"] is None and (f["set"]["VSync"], f["set"]["TripleBuffering"]) == ("0", "0")
+        assert f["set"]["DynamicCrowds"] == "0"  # CPU cost in cities; Act 3 is CPU-bound
 
 
 def test_bundled_games_leave_resolution_alone():
@@ -449,9 +518,15 @@ def test_bundled_games_load():
     for game in Game:
         devs = games.load_games()[game]["devices"]
         assert set(devs) <= real, game
-        assert all(devs[d]["profiles"] == devs[TESTED]["profiles"] for d in deck_class), game
-    for profile in ("quality", "balanced", "performance", "uncapped"):
-        assert _profiles(Game.ELDEN_RING)[profile]["env"] == {"MESA_VK_WSI_PRESENT_MODE": "immediate"}, profile
+        settings = lambda d: {p: {**b, "resolution": None} for p, b in devs[d]["profiles"].items()}
+        assert all(settings(d) == settings(TESTED) for d in deck_class), game
+        # Recommended resolution: tested at 720p on the Ally (Lies of P Quality/Balanced at 1080p);
+        # the Decks' native 1280x800 (about 11% more pixels than 720p).
+        for name, body in devs[TESTED]["profiles"].items():
+            lies_1080p = game == Game.LIES_OF_P and name in ("quality", "balanced")
+            assert body["resolution"] == ("1920x1080" if lies_1080p else "1280x720"), (game, name)
+        for d in ("steam-deck-lcd", "steam-deck-oled"):
+            assert {b["resolution"] for b in devs[d]["profiles"].values()} == {"1280x800"}, (game, d)
 
 # --- devices ---------------------------------------------------------------
 
@@ -496,11 +571,11 @@ def test_level_fallback_chain():
     devs = {d["device"]: d for d in (
         validate_device_doc(_device(levels={"quality": {"720p": {"fps_limit": 30}, "any": {"fps_limit": 25}}})),
         validate_device_doc(_device(device="generic", match={"product_name": []},
-                                    levels={"quality": {"any": {"fps_limit": 20}}, "uncapped": {"any": {}}})),
+                                    levels={"quality": {"any": {"fps_limit": 20}}, "performance": {"any": {}}})),
     )}
     assert devices.resolve_level(devs, "x", "quality", "720p") == ({"fps_limit": 30}, False)
     assert devices.resolve_level(devs, "x", "quality", "1080p") == ({"fps_limit": 25}, False)
-    assert devices.resolve_level(devs, "x", "uncapped", "720p") == ({}, True)
+    assert devices.resolve_level(devs, "x", "performance", "720p") == ({}, True)
     assert devices.resolve_level(devs, "nope", "quality", "720p") == ({"fps_limit": 20}, True)
     assert devices.resolve_level(devs, "generic", "quality", "720p") == ({"fps_limit": 20}, False)
     assert devices.resolve_level(devs, "x", "performance", "720p") == ({}, True)

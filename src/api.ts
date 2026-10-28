@@ -1,20 +1,18 @@
 import { callable } from "@decky/api";
 
-export type Profile = "default" | "quality" | "balanced" | "performance" | "uncapped";
+export type Profile = "default" | "quality" | "balanced" | "performance";
 
 export const PROFILES: { id: Profile; label: string }[] = [
   { id: "default", label: "Default (original)" },
   { id: "quality", label: "Quality" },
   { id: "balanced", label: "Balanced" },
   { id: "performance", label: "Performance" },
-  { id: "uncapped", label: "Uncapped" },
 ];
 
-// profile_device: whose profiles to borrow when the game has none for this device (null: FPS cap only).
-export interface GameSettings { profile: Profile; fps_cap?: boolean; profile_device?: string | null }
+// profile_device: whose profiles to borrow when the game has none for this device (null: none, nothing is set).
+export interface GameSettings { profile: Profile; profile_device?: string | null }
 export interface Settings {
   schema_version: number;
-  device: string | null;
   global_profile: null;
   games: Record<string, GameSettings>;
   game_filter: GameFilter;
@@ -22,14 +20,16 @@ export interface Settings {
 }
 export interface Bootstrap {
   settings: Settings;
-  fps_limits: Record<Profile, number | null>;  // each profile's FPS cap on the configured device
-  detected: string | null;
-  devices: { id: string; name: string; native: string }[];
+  device: string;  // detected, else "generic"
+  fps_targets: Record<Profile, number | null>;  // each profile's target FPS on this device (shown only)
+  devices: { id: string; name: string }[];
 }
-export type GameFilter = "verified" | "loadout" | "all";
+export type GameFilter = "verified" | "loadout";
 export interface Game {
   appid: number; name: string; supported: boolean; verified: boolean; profile: Profile | null;
   devices: string[];  // devices the game has Loadout profiles for
+  // Per device: its profiles (one it leaves out is hidden) with the recommended "WIDTHxHEIGHT", if any.
+  profiles: Record<string, Partial<Record<Profile, string | null>>>;
 }
 export interface Change { kind: string; target: string; key: string; old: string | null; new: string | null }
 export interface Plan {
@@ -45,14 +45,13 @@ export interface ApplyResult { launch_options: string; warnings: string[]; appli
 
 export const getBootstrap = callable<[], Bootstrap>("get_bootstrap");
 export const listGames = callable<[], Game[]>("list_games");
-export const saveSettings = callable<[device: string], Settings>("save_settings");
 export const setGameFilter = callable<[filter: GameFilter], Settings>("set_game_filter");
 export const resetSettings = callable<[], Settings>("reset_settings");
 export const planProfile =
-  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean, profileDevice: string | null], Plan>(
+  callable<[appid: number, profile: Profile, current: string, profileDevice: string | null], Plan>(
     "plan_profile");
 export const applyProfile =
-  callable<[appid: number, profile: Profile, current: string, fpsCap: boolean, profileDevice: string | null],
+  callable<[appid: number, profile: Profile, current: string, profileDevice: string | null],
     ApplyResult>("apply_profile");
 
 // Steam client internals (not a public contract): read/write a game's launch options.

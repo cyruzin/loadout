@@ -3,14 +3,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-TOKENS = ("{prefix}", "{install_dir}", "{appid}")
-ROOT_TOKENS = ("{prefix}/", "{install_dir}/")
+# {xdg_data}: ~/.local/share, where native Linux games keep their settings (Baldur's Gate 3).
+TOKENS = ("{prefix}", "{install_dir}", "{xdg_data}", "{appid}")
+ROOT_TOKENS = ("{prefix}/", "{install_dir}/", "{xdg_data}/")
 
 
 def expand(template: str, ctx: dict[str, str]) -> str:
     # Plain replace on purpose: never str.format() with untrusted strings.
     for t in TOKENS:
-        template = template.replace(t, ctx[t.strip("{}")])
+        if t in template:
+            if t.strip("{}") not in ctx:
+                raise ValueError(f"no {t} for this game")
+            template = template.replace(t, ctx[t.strip("{}")])
     if "{" in template or "}" in template:
         raise ValueError("unknown token")
     if "\x00" in template:

@@ -23,6 +23,7 @@
       "verified": { "proton": "default", "date": "2026-10-24" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -51,6 +52,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -79,34 +81,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "1",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.ReflectionQuality": "0",
-                "[ScalabilityGroups]sg.AtmosphereQuality": "0",
-                "[ScalabilityGroups]sg.AmbientOcclusionQuality": "0",
-                "[ScalabilityGroups]sg.AnisotropyQuality": "3",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Mode": "Quality",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Sharpness": "0.700000",
-                "[/Script/ProjectP.LGameUserSettings]FSR3FrameInterpolation": "False",
-                "[/Script/ProjectP.LGameUserSettings]CACAOEnabled": "True",
-                "[/Script/ProjectP.LGameUserSettings]bUseVSync": "False",
-                "[/Script/ProjectP.LGameUserSettings]FrameRateLimit": "0.000000"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -140,6 +115,7 @@
       "verified": { "proton": "default", "date": "2026-10-24" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -168,6 +144,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -196,34 +173,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "1",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.ReflectionQuality": "0",
-                "[ScalabilityGroups]sg.AtmosphereQuality": "0",
-                "[ScalabilityGroups]sg.AmbientOcclusionQuality": "0",
-                "[ScalabilityGroups]sg.AnisotropyQuality": "3",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Mode": "Quality",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Sharpness": "0.700000",
-                "[/Script/ProjectP.LGameUserSettings]FSR3FrameInterpolation": "False",
-                "[/Script/ProjectP.LGameUserSettings]CACAOEnabled": "True",
-                "[/Script/ProjectP.LGameUserSettings]bUseVSync": "False",
-                "[/Script/ProjectP.LGameUserSettings]FrameRateLimit": "0.000000"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -257,6 +207,7 @@
       "verified": { "proton": "default", "date": "2026-10-24" },
       "profiles": {
         "quality": {
+          "resolution": "1920x1080",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -285,6 +236,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1920x1080",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
@@ -313,34 +265,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",
-              "format": "ini",
-              "set": {
-                "[ScalabilityGroups]sg.ViewDistanceQuality": "0",
-                "[ScalabilityGroups]sg.AntiAliasingQuality": "0",
-                "[ScalabilityGroups]sg.PostProcessQuality": "0",
-                "[ScalabilityGroups]sg.ShadingQuality": "0",
-                "[ScalabilityGroups]sg.TextureQuality": "1",
-                "[ScalabilityGroups]sg.EffectsQuality": "0",
-                "[ScalabilityGroups]sg.FoliageQuality": "0",
-                "[ScalabilityGroups]sg.ShadowQuality": "0",
-                "[ScalabilityGroups]sg.ReflectionQuality": "0",
-                "[ScalabilityGroups]sg.AtmosphereQuality": "0",
-                "[ScalabilityGroups]sg.AmbientOcclusionQuality": "0",
-                "[ScalabilityGroups]sg.AnisotropyQuality": "3",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Mode": "Quality",
-                "[/Script/ProjectP.LGameUserSettings]FSR3Sharpness": "0.700000",
-                "[/Script/ProjectP.LGameUserSettings]FSR3FrameInterpolation": "False",
-                "[/Script/ProjectP.LGameUserSettings]CACAOEnabled": "True",
-                "[/Script/ProjectP.LGameUserSettings]bUseVSync": "False",
-                "[/Script/ProjectP.LGameUserSettings]FrameRateLimit": "0.000000"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{install_dir}/LiesofP/Saved/Config/WindowsNoEditor/GameUserSettings.ini",

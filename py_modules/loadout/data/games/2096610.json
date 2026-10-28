@@ -24,6 +24,7 @@
       "verified": { "proton": "default", "date": "2026-10-27" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -46,6 +47,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -68,28 +70,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-              "format": "ini",
-              "set": {
-                "[]sys_spec_GameEffects": "1",
-                "[]sys_spec_ObjectDetail": "1",
-                "[]sys_spec_Particles": "1",
-                "[]sys_spec_PostProcessing": "1",
-                "[]sys_spec_Shading": "1",
-                "[]sys_spec_Shadows": "1",
-                "[]sys_spec_Water": "1",
-                "[]sys_spec_TextureResolution": "3",
-                "[]r_vSync": "0",
-                "[]r_TexMaxAnisotropy": "16",
-                "[]r_TexMinAnisotropy": "16",
-                "[]r_MotionBlurShutterSpeed": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -118,6 +99,7 @@
       "verified": { "proton": "default", "date": "2026-10-27" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -140,6 +122,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -162,28 +145,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-              "format": "ini",
-              "set": {
-                "[]sys_spec_GameEffects": "1",
-                "[]sys_spec_ObjectDetail": "1",
-                "[]sys_spec_Particles": "1",
-                "[]sys_spec_PostProcessing": "1",
-                "[]sys_spec_Shading": "1",
-                "[]sys_spec_Shadows": "1",
-                "[]sys_spec_Water": "1",
-                "[]sys_spec_TextureResolution": "3",
-                "[]r_vSync": "0",
-                "[]r_TexMaxAnisotropy": "16",
-                "[]r_TexMinAnisotropy": "16",
-                "[]r_MotionBlurShutterSpeed": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -212,6 +174,7 @@
       "verified": { "proton": "default", "date": "2026-10-27" },
       "profiles": {
         "quality": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -234,6 +197,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
@@ -256,28 +220,7 @@
           ]
         },
         "performance": {
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",
-              "format": "ini",
-              "set": {
-                "[]sys_spec_GameEffects": "1",
-                "[]sys_spec_ObjectDetail": "1",
-                "[]sys_spec_Particles": "1",
-                "[]sys_spec_PostProcessing": "1",
-                "[]sys_spec_Shading": "1",
-                "[]sys_spec_Shadows": "1",
-                "[]sys_spec_Water": "1",
-                "[]sys_spec_TextureResolution": "3",
-                "[]r_vSync": "0",
-                "[]r_TexMaxAnisotropy": "16",
-                "[]r_TexMinAnisotropy": "16",
-                "[]r_MotionBlurShutterSpeed": "0"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x720",
           "files": [
             {
               "path": "{prefix}/drive_c/users/steamuser/Saved Games/Crysis3Remastered/game.cfg",

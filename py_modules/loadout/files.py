@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
-from . import inicfg, jsoncfg, xmlcfg
+from . import inicfg, jsoncfg, lsxcfg, xmlcfg
 from .paths import safe_path
 from .store import atomic_write
 
@@ -15,24 +15,40 @@ MAX_SIZE = 1024 * 1024
 class FileChange(NamedTuple):
     path: str
     key: str
-    old: str
-    new: str
+    old: Optional[str]  # None: the key isn't in the file (.lsx: the game's default)
+    new: Optional[str]
 
 
 class FilePlan(NamedTuple):
     changes: tuple[FileChange, ...] = ()
     warnings: tuple[str, ...] = ()
     error: Optional[str] = None
-    writes: tuple[tuple[str, dict[str, str]], ...] = ()  # (path, {key: value}) to write
-    state: Optional[dict[str, dict[str, dict[str, str]]]] = None  # path -> key -> {old, new}
+    writes: tuple[tuple[str, dict[str, Optional[str]]], ...] = ()  # (path, {key: value}) to write
+    state: Optional[dict[str, dict[str, dict[str, Optional[str]]]]] = None  # path -> key -> {old, new}
 
 
-def handler(key: str) -> Any:
-    """INI keys are written "[Section]Key", JSON keys "/path"; XML element names can't start with
-    either. Validation ties each file's keys to its declared format, so they all pick the same one."""
+def handler(key: str, path: str) -> Any:
+    """.lsx files are Larian's (validation ties the format to the extension). INI keys are written
+    "[Section]Key", JSON keys "/path"; XML element names can't start with either. Validation ties
+    each file's keys to its declared format, so they all pick the same one."""
+    if path.endswith(".lsx"):
+        return lsxcfg
     if key.startswith("["):
         return inicfg
     return jsoncfg if key.startswith("/") else xmlcfg
+
+
+def roots(ctx: dict[str, str]) -> list[Path]:
+    return [Path(ctx[k]) for k in ("prefix", "install_dir", "xdg_data") if k in ctx]
+
+
+def allowed(p: Path, ctx: dict[str, str]) -> bool:
+    """Inside the game's prefix or install dir, or in ~/.local/share but not in Steam's own folder
+    there (Steam's settings and every other game's files)."""
+    r = {k: Path(v).resolve() for k, v in ctx.items() if k in ("prefix", "install_dir", "xdg_data")}
+    if any(p.is_relative_to(r[k]) for k in ("prefix", "install_dir") if k in r):
+        return True
+    return "xdg_data" in r and p.is_relative_to(r["xdg_data"]) and not p.is_relative_to(r["xdg_data"] / "Steam")
 
 
 def read_nofollow(p: Path) -> bytes:
@@ -52,23 +68,25 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
         return FilePlan()
     if ctx is None:
         return FilePlan(error="Game folder not found, so its config files can't be checked.")
-    roots = [Path(ctx["prefix"]), Path(ctx["install_dir"])]
-    targets: dict[Path, dict[str, str]] = {}
+    targets: dict[Path, dict[str, Optional[str]]] = {}
     try:
         for spec in specs:
-            targets.setdefault(safe_path(spec["path"], ctx, roots), {}).update(spec["set"])
+            p = safe_path(spec["path"], ctx, roots(ctx))
+            if not allowed(p, ctx):
+                raise PermissionError(f"outside the allowed area: {p}")
+            targets.setdefault(p, {}).update(spec["set"])
     except (ValueError, PermissionError) as e:
         return FilePlan(error=f"Unsafe config path rejected: {e}")
     for p in previous:
         path = Path(p)
-        if path not in targets and any(path.is_relative_to(r.resolve()) for r in roots):
+        if path not in targets and allowed(path, ctx):
             targets[path] = {}
 
     changes: list[FileChange] = []
     warnings = [f"{Path(p).name}: no longer in the game folder, not restored."
                 for p in previous if Path(p) not in targets]
-    writes: list[tuple[str, dict[str, str]]] = []
-    state: dict[str, dict[str, dict[str, str]]] = {}
+    writes: list[tuple[str, dict[str, Optional[str]]]] = []
+    state: dict[str, dict[str, dict[str, Optional[str]]]] = {}
     for path, want in targets.items():
         prev = previous.get(str(path), {})
         try:
@@ -81,11 +99,11 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
             continue
         except OSError as e:
             return FilePlan(error=f"Can't read {path.name}: {e}")
-        target: dict[str, str] = {}
-        new_state: dict[str, dict[str, str]] = {}
+        target: dict[str, Optional[str]] = {}
+        new_state: dict[str, dict[str, Optional[str]]] = {}
         for key in sorted(set(want) | set(prev)):
             try:
-                current = handler(key).read_values(raw, [key])[key]
+                current = handler(key, str(path)).read_values(raw, [key])[key]
             except ValueError as e:
                 if key in want:
                     return FilePlan(error=f"{path.name}: {e}")
@@ -110,7 +128,7 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
     return FilePlan(tuple(changes), tuple(warnings), None, tuple(writes), state)
 
 
-def apply_writes(writes: tuple[tuple[str, dict[str, str]], ...]) -> None:
+def apply_writes(writes: tuple[tuple[str, dict[str, Optional[str]]], ...]) -> None:
     """All or nothing: if any file fails, the ones already written get their original bytes back."""
     done: list[tuple[Path, bytes]] = []
     try:
@@ -119,7 +137,7 @@ def apply_writes(writes: tuple[tuple[str, dict[str, str]], ...]) -> None:
             if path.parent.resolve() != path.parent:
                 raise PermissionError(f"{path.parent} changed since planning")
             raw = read_nofollow(path)
-            atomic_write(path, handler(next(iter(values))).set_values(raw, values))
+            atomic_write(path, handler(next(iter(values)), path_s).set_values(raw, values))
             done.append((path, raw))
     except BaseException:
         for path, raw in reversed(done):

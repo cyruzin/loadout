@@ -1,7 +1,7 @@
 # Loadout
 
 A [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin that applies one-click
-per-game, console-style profiles — **Quality**, **Balanced**, **Performance**, **Uncapped** — and can
+per-game, console-style profiles — **Quality**, **Balanced**, **Performance** — and can
 always return a game to **Default (original)**: exactly what you had before Loadout touched it.
 
 Targets SteamOS first; Bazzite, CachyOS and other Linux distros running Steam Game Mode + Decky
@@ -9,124 +9,108 @@ should work too.
 
 ## What the MVP does
 
-- Lists installed Steam games by reading `libraryfolders.vdf` and `appmanifest_*.acf` (all libraries,
-  including SD cards). Proton/runtime tools are always hidden. A **Show** filter picks which games
-  are listed (saved in settings):
-  - **Verified on this device** (default): games with a Loadout entry that has profiles for your
-    device.
+- Lists installed Steam games that have a Loadout entry, by reading `libraryfolders.vdf` and
+  `appmanifest_*.acf` (all libraries, including SD cards). A **Show** filter picks which ones
+  (saved in settings):
+  - **Verified on this device** (default): entries with profiles for your device.
   - **All Loadout games**: also entries with profiles for other devices only, marked
-    "(other devices)", and any game with a profile applied, even a generic one.
-  - **All games**: also every other installed game, marked "(generic)" (FPS cap only).
+    "(other devices)", and any game with a profile applied (e.g. an FPS cap set by Loadout 0.5.0
+    or older on a game without an entry, marked "(no settings)"), so it can be set back to Default.
 
-  For a selected game that isn't verified on your device, the **Game** dropdown says what a
-  profile does there: "Other devices" (profiles exist for other devices only) or "Generic" (no
-  Loadout settings, FPS cap only).
+  For a selected game that isn't verified on your device, the **Game** dropdown says why.
 
-  When a filter matches more than 50 games (a big library, or lots of verified games), only the 50
-  most recently played are listed (plus the running game and any game with a profile applied),
-  with a note saying so, and a **Search games** field (opens the on-screen keyboard) finds any
-  other game in that filter by name.
+  When a filter matches more than 50 games, only the 50 most recently played are listed (plus the
+  running game and any game with a profile applied), with a note saying so, and a **Search games**
+  field (opens the on-screen keyboard) finds any other game in that filter by name.
 
   When the panel opens it shows the last game you applied a profile to (remembered
   across Steam and Decky restarts), else the game that's running.
 
-  Games with a profile applied show it next to the name (e.g. "Crysis 3 (generic) · Performance").
+  Games with a profile applied show it next to the name (e.g. "Crysis 3 Remastered · Performance").
   If the filter hides such a game, a note lists it so it can still be set back to Default.
-- Applies a profile by writing a managed block to the game's launch options, e.g.
-
-  ```
-  LOADOUT_BEGIN=1 DXVK_FRAME_RATE=40 DXVK_CONFIG='dxgi.maxFrameRate=40;d3d9.maxFrameRate=40' VKD3D_FRAME_RATE=40 LOADOUT_END=1 %command% -novid
-  ```
-
-  Game arguments from an entry go right after `%command%` and are recorded in the block
-  (`LOADOUT_ARGS=--launcher-skip`), so Default removes them too.
-
-  Your own launch options are kept. Switching profiles never stacks; Default restores your original
-  string exactly (or, if you edited it meanwhile, removes only the Loadout block).
+- Edits in-game graphics settings: XML configs (e.g. ELDEN RING's `GraphicsConfig.xml` in the
+  Proton prefix), INI configs (e.g. Lies of P's Unreal Engine `GameUserSettings.ini` in the install
+  folder), JSON configs (e.g. Cyberpunk 2077's `UserSettings.json`) and Larian's LSX configs
+  (Baldur's Gate 3's native `graphicSettings.lsx` in `~/.local/share`; never elsewhere in your home,
+  never Steam's own folder). Only the listed keys
+  change, each original value is backed up, writes are atomic and all-or-nothing, and nothing is
+  written while the game runs (the confirmation asks you to close it). Default puts every key back
+  unless the game changed it since.
 - Profiles are per device, so each device's graphics can be tuned on its own. When a game has no
   profiles for your device, **Use profiles from** lists the devices it has them for: pick one with a
-  similar chip (a ROG Ally X can start from the ROG Xbox Ally's). Until you pick one, the profiles
-  only set the FPS cap. The FPS cap always comes from your own device's table.
-- Each game has an **Apply the profile's N FPS cap** switch (on by default; shown for Quality,
-  Balanced and Performance with the cap from your device's table). Off, the profile only changes
-  the game's settings and you set the frame limit in Steam's Quick Access Menu, which you can
-  change without leaving the game. Flipping it re-applies the current profile (with the usual
-  confirmation).
-- Edits in-game graphics settings for games that have a data entry: XML configs (e.g. ELDEN
-  RING's `GraphicsConfig.xml` in the Proton prefix), INI configs (e.g. Lies of P's Unreal
-  Engine `GameUserSettings.ini` in the install folder) and JSON configs (e.g. Cyberpunk 2077's
-  `UserSettings.json`). Only the listed keys change, each original
-  value is backed up, writes are atomic and all-or-nothing, and nothing is written while the game runs
-  (the confirmation asks you to close it). Default puts every key back unless the game changed it
-  since.
+  similar chip (a ROG Ally X can start from the ROG Xbox Ally's). Until you pick one, nothing is set.
+  The **Profile** dropdown only lists the profiles a device has: an entry leaves out one the device
+  can't reach the target FPS with (e.g. Performance on a game that doesn't run at 60).
+- **No FPS cap.** Each profile is made for a frame rate and a resolution, and the **Profile**
+  dropdown says which ("Made for 40 FPS at 1280×720"): set the frame limit in Steam's Quick Access
+  Menu (Performance → Frame limit, per game with "Use per-game profile") and the resolution in the
+  game's menu. Steam's limiter works for every game and can be changed without leaving it. The
+  target FPS comes from your device's table (below). There's no Uncapped profile since 0.6.0: it
+  was Performance's graphics without Loadout's cap; to play uncapped, turn Steam's frame limit off.
+- Where an entry needs them, writes per-game env vars and launch arguments to a managed block in
+  the game's launch options, e.g. ELDEN RING's
+
+  ```
+  LOADOUT_BEGIN=1 MESA_VK_WSI_PRESENT_MODE=immediate LOADOUT_END=1 %command% -novid
+  ```
+
+  Game arguments go right after `%command%` and are recorded in the block
+  (`LOADOUT_ARGS=--launcher-skip`, Cyberpunk 2077), so Default removes them too. Your own launch
+  options are kept. Switching profiles never stacks; Default restores your original string exactly
+  (or, if you edited it meanwhile, removes only the Loadout block). A block from Loadout 0.5.0 or
+  older (with its FPS cap) is removed the next time you apply a profile or Default to that game.
 - Never acts on its own: nothing runs when a game starts or exits. Settings you change in the game's
   menu stay as you set them until you apply a profile again (the diff shows what that would change).
-- Shows a dry-run diff and asks for confirmation before changing anything.
+- Asks for confirmation before changing anything, with a plain summary (how many game settings
+  change, the target FPS and resolution) and the full dry-run diff under **Show details** (env
+  vars, each config key old → new, launch options before/after).
 - Detects the device from `/sys/class/dmi/id/product_name` (Steam Deck LCD/OLED, ROG Ally and
-  Legion Go families bundled; anything else falls back to a generic table) and asks you to confirm
-  it on first run. After that the panel only shows it (**Device**, first in the panel).
+  Legion Go families bundled; anything else falls back to the generic table, whose games start
+  under **All Loadout games** and borrow profiles with **Use profiles from**). Nothing to set up:
+  the panel opens on your games and only shows the device (**Device**, first in the panel).
 - **Reset Loadout** (under **Settings**, after a confirmation listing the affected games) applies
-  Default (original) to every game with a profile, then clears Loadout's settings so Setup asks for
-  the device again. The confirmation names the 10 most recently played (and how many more); the
-  panel shows the progress ("Resetting 3 of 20: …"). It's blocked while one of those games is
+  Default (original) to every game with a profile, then clears Loadout's settings. The
+  confirmation names the 10 most recently played (and how many more); the panel shows the progress ("Resetting 3 of 20: …"). It's blocked while one of those games is
   running, and stops without clearing anything if a game can't be restored.
 - Shows the result of every apply in the panel itself (Steam can play a toast's sound without
   showing it while the Quick Access Menu is open).
-- Launch-option changes (FPS cap, env vars, game arguments) apply the next time the game launches.
+- Launch-option changes (env vars, game arguments) apply the next time the game launches.
 
-**FPS cap:** uses the DXVK/VKD3D frame limiters, so it works for Direct3D games running under
-Proton. Native Linux games (OpenGL or Vulkan) are not capped: use Steam's per-game profile in the
-Quick Access Menu (Performance → Use per-game profile → Frame limit) for those.
+Target FPS per profile (what each device's profiles are made for; set it as Steam's frame limit):
 
-| Device                          | Panel              | Quality | Balanced | Performance | Uncapped |
-|---------------------------------|--------------------|---------|----------|-------------|----------|
-| Steam Deck LCD                  | 1280×800, 60 Hz    | 30      | 40       | 60          | no cap   |
-| Steam Deck OLED                 | 1280×800, 90 Hz    | 30      | 45       | 90          | no cap   |
-| ROG Ally                        | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
-| ROG Ally X                      | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
-| ROG Xbox Ally                   | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
-| ROG Xbox Ally X                 | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
-| ROG Xbox Ally X20¹              | 1920×1080, 120 Hz  | 30      | 40       | 60          | no cap   |
-| Lenovo Legion Go                | 2560×1600, 144 Hz  | 36      | 48       | 72          | no cap   |
-| Lenovo Legion Go 2              | 1920×1200, 144 Hz  | 36      | 48       | 72          | no cap   |
-| Lenovo Legion Go S              | 1920×1200, 120 Hz  | 30      | 40       | 60          | no cap   |
-| Generic / other                 | —                  | 30      | 40       | 60          | no cap   |
+| Device                          | Panel              | Quality | Balanced | Performance |
+|---------------------------------|--------------------|---------|----------|-------------|
+| Steam Deck LCD                  | 1280×800, 60 Hz    | 30      | 40       | 60          |
+| Steam Deck OLED                 | 1280×800, 90 Hz    | 30      | 45       | 90          |
+| ROG Ally                        | 1920×1080, 120 Hz  | 30      | 40       | 60          |
+| ROG Ally X                      | 1920×1080, 120 Hz  | 30      | 40       | 60          |
+| ROG Xbox Ally                   | 1920×1080, 120 Hz  | 30      | 40       | 60          |
+| ROG Xbox Ally X                 | 1920×1080, 120 Hz  | 30      | 40       | 60          |
+| ROG Xbox Ally X20¹              | 1920×1080, 120 Hz  | 30      | 40       | 60          |
+| Lenovo Legion Go                | 2560×1600, 144 Hz  | 36      | 48       | 72          |
+| Lenovo Legion Go 2              | 1920×1200, 144 Hz  | 36      | 48       | 72          |
+| Lenovo Legion Go S              | 1920×1200, 120 Hz  | 30      | 40       | 60          |
+| Generic / other                 | —                  | 30      | 40       | 60          |
 
-Caps divide the panel refresh rate evenly (e.g. 40 FPS on 120 Hz, 48 FPS on 144 Hz) to keep frame
-pacing smooth.
+Targets divide the panel refresh rate evenly (e.g. 40 FPS on 120 Hz, 48 FPS on 144 Hz) to keep
+frame pacing smooth.
 
 ¹ X20 support is early.
 
-Values live in `py_modules/loadout/data/devices/*.json`.
-
-### Game-specific vs. generic profiles
-
-What a profile does depends on whether the game has a Loadout entry in
-`py_modules/loadout/data/games/` with profiles for your device (or one you picked under
-**Use profiles from**):
-
-| | Entry with profiles for your device (e.g. ELDEN RING) | Any other game ("generic"), or an entry for other devices with none picked |
-|---|---|---|
-| FPS cap from the device table | yes | yes |
-| Per-game env vars (e.g. `MESA_VK_WSI_PRESENT_MODE`) | yes | no |
-| Per-game launch arguments (e.g. `--launcher-skip`) | yes | no |
-| In-game graphics settings (config file edits) | yes, where the entry defines them | no |
-
-In short: **without profiles for your device, a profile only applies the FPS cap.** Graphics stay as
-you set them in the game, and Uncapped simply removes Loadout's cap. That is why the game list
-shows only verified games by default; pick **All games** in the Show filter to use the generic cap
-on the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute an entry or your device's profiles.
+Values live in `py_modules/loadout/data/devices/*.json` (`fps_limit` per profile: the target shown).
 
 ### Supported games
 
-ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy and Crysis 3 Remastered have game-specific entries. What each
+ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy, Crysis 3 Remastered and Baldur's Gate 3
+(native Linux build) have game-specific entries. What each
 profile sets per game, and which devices it has profiles for: [GAMES.md](GAMES.md).
 
 ### Not included
 
 - Not yet: community data repo download, global/batch profiles,
   export/import.
-- Out of scope: TDP and other power settings. Use the Steam Quick Access Menu for those.
+- Out of scope: TDP and other power settings, and (since 0.6.0) the FPS cap. Use the Steam Quick
+  Access Menu for those.
 - Out of scope since 0.3.1: the game's resolution. It was removed because it's easy to change
   in the game's own menu. If you picked a resolution in Loadout 0.3.0, applying a profile with
   the game closed puts the original back.
@@ -230,7 +214,7 @@ has the step-by-step for:
   moves it to the default "Verified on this device" list for everyone with that device;
 - adding a new game (finding its config file, mapping menu options to file values, writing the
   entry, testing every profile);
-- adding a new device (DMI string, panel, FPS caps).
+- adding a new device (DMI string, panel, target FPS).
 
 ## License
 

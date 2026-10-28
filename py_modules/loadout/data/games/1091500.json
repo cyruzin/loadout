@@ -66,6 +66,7 @@
       "verified": { "proton": "default", "date": "2026-10-25" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -140,6 +141,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -214,80 +216,7 @@
           ]
         },
         "performance": {
-          "launch": {
-            "args": ["--launcher-skip"]
-          },
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/UserSettings.json",
-              "format": "json",
-              "set": {
-                "/data[group_name=/graphics/presets]/options[name=QuickPresets]/value": "Custom",
-                "/data[group_name=/graphics/presets]/options[name=ResolutionScaling]/value": "FSR2",
-                "/data[group_name=/graphics/presets]/options[name=FSR2]/value": "Performance",
-                "/data[group_name=/graphics/presets]/options[name=FSR2_Sharpness]/value": "0.5",
-                "/data[group_name=/graphics/presets]/options[name=DynamicResolutionScaling]/value": "false",
-                "/data[group_name=/graphics/presets]/options[name=FrameGeneration]/value": "Off",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/value": "Low",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedReflections]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedSunShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLocalShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/value": "Off",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracingForPhotoMode]/value": "false",
-                "/data[group_name=/video/display]/options[name=VSync]/value": "UI-Settings-Video-QualitySetting-Off",
-                "/data[group_name=/video/display]/options[name=MaximumFPS_OnOff]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=ContactShadows]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=FacialTangentUpdates]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/value": "16",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/index": "3",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/index": "1",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/value": "Medium",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/value": "High",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/index": "0",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/value": "Low",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=FilmGrain]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=ChromaticAberration]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=DepthOfField]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=LensFlares]/value": "true",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/value": "Off",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=Vignette]/value": "false"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -367,6 +296,7 @@
       "verified": { "proton": "default", "date": "2026-10-25" },
       "profiles": {
         "quality": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -441,6 +371,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -515,80 +446,7 @@
           ]
         },
         "performance": {
-          "launch": {
-            "args": ["--launcher-skip"]
-          },
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/UserSettings.json",
-              "format": "json",
-              "set": {
-                "/data[group_name=/graphics/presets]/options[name=QuickPresets]/value": "Custom",
-                "/data[group_name=/graphics/presets]/options[name=ResolutionScaling]/value": "FSR2",
-                "/data[group_name=/graphics/presets]/options[name=FSR2]/value": "Performance",
-                "/data[group_name=/graphics/presets]/options[name=FSR2_Sharpness]/value": "0.5",
-                "/data[group_name=/graphics/presets]/options[name=DynamicResolutionScaling]/value": "false",
-                "/data[group_name=/graphics/presets]/options[name=FrameGeneration]/value": "Off",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/value": "Low",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedReflections]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedSunShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLocalShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/value": "Off",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracingForPhotoMode]/value": "false",
-                "/data[group_name=/video/display]/options[name=VSync]/value": "UI-Settings-Video-QualitySetting-Off",
-                "/data[group_name=/video/display]/options[name=MaximumFPS_OnOff]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=ContactShadows]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=FacialTangentUpdates]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/value": "16",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/index": "3",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/index": "1",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/value": "Medium",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/value": "High",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/index": "0",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/value": "Low",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=FilmGrain]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=ChromaticAberration]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=DepthOfField]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=LensFlares]/value": "true",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/value": "Off",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=Vignette]/value": "false"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x800",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -668,6 +526,7 @@
       "verified": { "proton": "default", "date": "2026-10-25" },
       "profiles": {
         "quality": {
+          "resolution": "1280x720",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -742,6 +601,7 @@
           ]
         },
         "balanced": {
+          "resolution": "1280x720",
           "launch": {
             "args": ["--launcher-skip"]
           },
@@ -816,80 +676,7 @@
           ]
         },
         "performance": {
-          "launch": {
-            "args": ["--launcher-skip"]
-          },
-          "files": [
-            {
-              "path": "{prefix}/drive_c/users/steamuser/AppData/Local/CD Projekt Red/Cyberpunk 2077/UserSettings.json",
-              "format": "json",
-              "set": {
-                "/data[group_name=/graphics/presets]/options[name=QuickPresets]/value": "Custom",
-                "/data[group_name=/graphics/presets]/options[name=ResolutionScaling]/value": "FSR2",
-                "/data[group_name=/graphics/presets]/options[name=FSR2]/value": "Performance",
-                "/data[group_name=/graphics/presets]/options[name=FSR2_Sharpness]/value": "0.5",
-                "/data[group_name=/graphics/presets]/options[name=DynamicResolutionScaling]/value": "false",
-                "/data[group_name=/graphics/presets]/options[name=FrameGeneration]/value": "Off",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/value": "Low",
-                "/data[group_name=/graphics/presets]/options[name=TextureQuality]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedReflections]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedSunShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLocalShadows]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/value": "Off",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedLighting]/index": "0",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracing]/value": "false",
-                "/data[group_name=/graphics/raytracing]/options[name=RayTracedPathTracingForPhotoMode]/value": "false",
-                "/data[group_name=/video/display]/options[name=VSync]/value": "UI-Settings-Video-QualitySetting-Off",
-                "/data[group_name=/video/display]/options[name=MaximumFPS_OnOff]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=ContactShadows]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=FacialTangentUpdates]/value": "false",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/value": "16",
-                "/data[group_name=/graphics/advanced]/options[name=Anisotropy]/index": "3",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=ShadowMeshQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LocalShadowsQuality]/index": "1",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=CascadedShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=DistantShadowsResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricFogResolution]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=VolumetricCloudsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MaxDynamicDecals]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=ScreenSpaceReflectionsQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=SubsurfaceScatteringQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/value": "Off",
-                "/data[group_name=/graphics/advanced]/options[name=AmbientOcclusion]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/value": "Medium",
-                "/data[group_name=/graphics/advanced]/options[name=ColorPrecision]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/value": "High",
-                "/data[group_name=/graphics/advanced]/options[name=GlobaIlluminationRange]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=MirrorQuality]/index": "0",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/value": "Low",
-                "/data[group_name=/graphics/advanced]/options[name=LODPreset]/index": "0",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/value": "Low",
-                "/data[group_name=/graphics/performance]/options[name=CrowdDensity]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=FilmGrain]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=ChromaticAberration]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=DepthOfField]/value": "false",
-                "/data[group_name=/graphics/basic]/options[name=LensFlares]/value": "true",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/value": "Off",
-                "/data[group_name=/graphics/basic]/options[name=MotionBlur]/index": "0",
-                "/data[group_name=/graphics/basic]/options[name=Vignette]/value": "false"
-              }
-            }
-          ]
-        },
-        "uncapped": {
+          "resolution": "1280x720",
           "launch": {
             "args": ["--launcher-skip"]
           },

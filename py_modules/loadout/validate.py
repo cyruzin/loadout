@@ -8,11 +8,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from . import inicfg, jsoncfg, xmlcfg
+from . import inicfg, jsoncfg, lsxcfg, xmlcfg
 from .textfile import VALUE
 from .paths import ROOT_TOKENS, expand
 
-PROFILES = ("quality", "balanced", "performance", "uncapped")
+# No "uncapped" since 0.6.0: without Loadout's FPS cap it was Performance again (Steam's QAM sets the limit).
+PROFILES = ("quality", "balanced", "performance")
 RESOLUTIONS = ("720p", "800p", "1080p", "1200p", "1440p", "1600p", "2160p")
 
 ENV_ALLOW = re.compile(r"^(DXVK_|VKD3D_|PROTON_|MANGOHUD|WINEDLLOVERRIDES$|SDL_|MESA_|RADV_)")
@@ -24,7 +25,7 @@ NATIVE = re.compile(r"^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$")
 ARG = re.compile(r"^--?[A-Za-z][A-Za-z0-9_-]{0,47}$")
 DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 # Config file formats and their key syntax: XML element names, INI "[Section]Key", JSON "/path".
-KEY_FORMATS = {"xml": xmlcfg.KEY, "ini": inicfg.KEY, "json": jsoncfg.KEY}
+KEY_FORMATS = {"xml": xmlcfg.KEY, "ini": inicfg.KEY, "json": jsoncfg.KEY, "lsx": lsxcfg.KEY}
 
 
 class ValidationError(ValueError):
@@ -102,9 +103,9 @@ def validate_device_doc(doc: Any) -> dict[str, Any]:
 def _path_template(x: Any, where: str) -> str:
     path = _str(x, where, 300)
     if not path.startswith(ROOT_TOKENS) or "\\" in path or any(seg in ("..", ".") for seg in path.split("/")):
-        raise ValidationError(f"{where}: must start with {{prefix}}/ or {{install_dir}}/, no . or ..")
+        raise ValidationError(f"{where}: must start with {{prefix}}/, {{install_dir}}/ or {{xdg_data}}/, no . or ..")
     try:
-        expand(path, {"prefix": "", "install_dir": "", "appid": ""})
+        expand(path, {"prefix": "", "install_dir": "", "xdg_data": "", "appid": ""})
     except ValueError as e:
         raise ValidationError(f"{where}: {e}") from None
     return path
@@ -141,13 +142,17 @@ def validate_files(x: Any, where: str) -> list[dict[str, Any]]:
         key_re = KEY_FORMATS.get(f["format"])
         if key_re is None:
             raise ValidationError(f"{w}.format: expected one of {sorted(KEY_FORMATS)}")
+        # files.handler picks Larian's parser by extension: the two must agree.
+        if (f["format"] == "lsx") != path.endswith(".lsx"):
+            raise ValidationError(f"{w}: .lsx files use format lsx, and only them")
         values = f["set"]
         if not isinstance(values, dict) or not 0 < len(values) <= 64:
             raise ValidationError(f"{w}.set: expected 1..64 keys")
         for k, val in values.items():
             if not isinstance(k, str) or not key_re.match(k):
                 raise ValidationError(f"{w}.set: invalid {f['format']} key {k!r}")
-            if not isinstance(val, str) or not VALUE.match(val):
+            # null (lsx only): remove the key, i.e. the game's default, which it doesn't write.
+            if not (val is None and f["format"] == "lsx") and (not isinstance(val, str) or not VALUE.match(val)):
                 raise ValidationError(f"{w}.set.{k}: invalid value")
         out.append({"path": path, "format": f["format"], "set": dict(values)})
     return out
@@ -158,7 +163,11 @@ def _profiles(x: Any, options: dict[str, dict[str, list[str]]], where: str) -> d
     clean = {}
     for profile, body in profiles.items():
         w = f"{where}.{profile}"
-        _obj(body, w, {"launch", "files"})
+        # resolution: what the profile was tested/is meant for, shown to the user. Never written.
+        _obj(body, w, {"resolution", "launch", "files"})
+        resolution = body.get("resolution")
+        if "resolution" in body and (not isinstance(resolution, str) or not NATIVE.match(resolution)):
+            raise ValidationError(f"{w}.resolution: expected WIDTHxHEIGHT")
         env: dict[str, str] = {}
         args: list[str] = []
         if "launch" in body:
@@ -168,11 +177,12 @@ def _profiles(x: Any, options: dict[str, dict[str, list[str]]], where: str) -> d
             if (not isinstance(args, list) or len(args) > 8 or len(set(args)) != len(args)
                     or not all(isinstance(a, str) and ARG.match(a) for a in args)):
                 raise ValidationError(f"{w}.launch.args: expected up to 8 plain flags")
-        clean[profile] = {"env": env, "args": list(args), "files": validate_files(body.get("files", []), f"{w}.files")}
+        clean[profile] = {"resolution": resolution, "env": env, "args": list(args),
+                          "files": validate_files(body.get("files", []), f"{w}.files")}
         for f in clean[profile]["files"]:
             for k, val in f["set"].items():
                 allowed = options.get(f["path"], {}).get(k)
-                if allowed is not None and val not in allowed:
+                if allowed is not None and val is not None and val not in allowed:
                     raise ValidationError(f"{w}: {k}={val} not in {allowed}")
     return clean
 

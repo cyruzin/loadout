@@ -1,0 +1,155 @@
+{
+  "schema_version": 2,
+  "appid": 1086940,
+  "name": "Baldur's Gate 3",
+  "options": {
+    "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx": {
+      "TextureDetail": ["3", "2", "1"],
+      "TerrainTextureDetail": ["3", "2", "1"],
+      "CloudsQuality": ["3", "2", "1"],
+      "FogQuality": ["3", "2", "1"],
+      "ModelDetail": ["2", "1"],
+      "DetailDistance": ["2", "1"],
+      "InstanceDistance": ["2", "1"],
+      "AnimationLODDetail": ["2", "1"],
+      "ShadowQuality": ["2", "1"],
+      "TextureFiltering": ["2", "3", "4", "5"],
+      "AntiAliasing": ["0", "1"],
+      "DOF": ["0", "1"],
+      "DOFQuality": ["0"],
+      "SSAOEnabled": ["0"],
+      "BloomEnabled": ["0"],
+      "SSSS": ["0"],
+      "DynamicCrowds": ["0"],
+      "VSync": ["0"],
+      "TripleBuffering": ["0"],
+      "FrameCapEnabled": ["1"],
+      "ResolutionUpscaleType": ["1", "2"],
+      "FSR1Mode": ["3", "2", "1", "0"],
+      "FSR2Mode": ["3", "2", "1", "0", "4"],
+      "CASEnabled": ["0"]
+    }
+  },
+  "devices": {
+    "steam-deck-lcd": {
+      "verified": { "proton": "native", "date": "2026-10-28" },
+      "profiles": {
+        "quality": {
+          "resolution": "1280x800",
+          "files": [
+            {
+              "path": "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx",
+              "format": "lsx",
+              "set": {
+                "TextureDetail": "2",
+                "TerrainTextureDetail": "3",
+                "TextureFiltering": "5",
+                "InstanceDistance": "2",
+                "FogQuality": "3",
+                "DetailDistance": "2",
+                "AnimationLODDetail": "2",
+                "ModelDetail": "2",
+                "ShadowQuality": "2",
+                "CloudsQuality": "3",
+                "ResolutionUpscaleType": "2",
+                "FSR2Mode": "0",
+                "FSR1Mode": null,
+                "AntiAliasing": "0",
+                "CASEnabled": "0",
+                "SSAOEnabled": null,
+                "DOF": "0",
+                "BloomEnabled": "0",
+                "SSSS": "0",
+                "VSync": "0",
+                "TripleBuffering": "0",
+                "FrameCapEnabled": null,
+                "SlowHDDMode": null,
+                "DynamicCrowds": "0"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "steam-deck-oled": {
+      "verified": { "proton": "native", "date": "2026-10-28" },
+      "profiles": {
+        "quality": {
+          "resolution": "1280x800",
+          "files": [
+            {
+              "path": "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx",
+              "format": "lsx",
+              "set": {
+                "TextureDetail": "2",
+                "TerrainTextureDetail": "3",
+                "TextureFiltering": "5",
+                "InstanceDistance": "2",
+                "FogQuality": "3",
+                "DetailDistance": "2",
+                "AnimationLODDetail": "2",
+                "ModelDetail": "2",
+                "ShadowQuality": "2",
+                "CloudsQuality": "3",
+                "ResolutionUpscaleType": "2",
+                "FSR2Mode": "0",
+                "FSR1Mode": null,
+                "AntiAliasing": "0",
+                "CASEnabled": "0",
+                "SSAOEnabled": null,
+                "DOF": "0",
+                "BloomEnabled": "0",
+                "SSSS": "0",
+                "VSync": "0",
+                "TripleBuffering": "0",
+                "FrameCapEnabled": null,
+                "SlowHDDMode": null,
+                "DynamicCrowds": "0"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "rog-xbox-ally": {
+      "verified": { "proton": "native", "date": "2026-10-28" },
+      "profiles": {
+        "quality": {
+          "resolution": "1280x720",
+          "files": [
+            {
+              "path": "{xdg_data}/Larian Studios/Baldur's Gate 3/graphicSettings.lsx",
+              "format": "lsx",
+              "set": {
+                "TextureDetail": "2",
+                "TerrainTextureDetail": "3",
+                "TextureFiltering": "5",
+                "InstanceDistance": "2",
+                "FogQuality": "3",
+                "DetailDistance": "2",
+                "AnimationLODDetail": "2",
+                "ModelDetail": "2",
+                "ShadowQuality": "2",
+                "CloudsQuality": "3",
+                "ResolutionUpscaleType": "2",
+                "FSR2Mode": "0",
+                "FSR1Mode": null,
+                "AntiAliasing": "0",
+                "CASEnabled": "0",
+                "SSAOEnabled": null,
+                "DOF": "0",
+                "BloomEnabled": "0",
+                "SSSS": "0",
+                "VSync": "0",
+                "TripleBuffering": "0",
+                "FrameCapEnabled": null,
+                "SlowHDDMode": null,
+                "DynamicCrowds": "0"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

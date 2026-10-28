@@ -19,7 +19,7 @@ in-game menu or real hardware. If you're unsure about something, leave it out an
 - On your computer: the [build and test setup](README.md#build) from the README.
 
 Know your device id: it's the file name (without `.json`) in `py_modules/loadout/data/devices/`,
-e.g. `steam-deck-oled` or `rog-xbox-ally`. The Loadout setup screen shows which one was detected.
+e.g. `steam-deck-oled` or `rog-xbox-ally`. The panel's **Device** row shows which one was detected.
 
 ## 1. Add your device to an existing game
 
@@ -30,19 +30,24 @@ its own block, so yours can set graphics higher or lower than the others without
 1. Install the latest Loadout release (see [Installing a release](README.md#releasing)).
 2. Under **Use profiles from**, pick the listed device closest to yours (e.g. `rog-xbox-ally` for a
    ROG Xbox Ally X20). Its profiles are your starting point.
-3. Close the game. Apply each profile (Quality, Balanced, Performance, Uncapped) and, for each one:
+3. Close the game. Apply each profile (Quality, Balanced, Performance) and, for each one:
    - read the confirmation diff: every key should change to the value in the JSON;
    - launch the game and check that the in-game menu shows those settings;
    - after launching, check the file again: some games overwrite values from their save on
      launch, and a key the game doesn't read from this file doesn't belong in the entry;
-   - play a few minutes: FPS cap holds, no crashes, no visual glitches. If your device has headroom
-     (or struggles), change settings in the menu and note what holds the profile's FPS cap.
+   - set Steam's frame limit (Quick Access Menu) to the profile's target FPS and the resolution
+     the panel recommends, then play a few minutes: the target holds, no crashes, no visual
+     glitches. If your device has headroom (or struggles), change settings in the menu and note
+     what holds the target.
 4. Apply **Default (original)** with the game closed and check that your previous settings and
    launch options are back.
 5. Note the Proton version the game runs with (game Properties → Compatibility). Use `default`
    only if you didn't force one; better, write the exact version, e.g. `Proton 9.0-4`.
 6. Copy the starting device's block under `devices`, rename it to your device id, set `verified`
-   and change only the values you tested. Values must be in the game's `options`:
+   and change only the values you tested (set each profile's `resolution` to the one you played at).
+   Leave out a profile your device can't hold the target FPS with even at the lowest settings
+   (e.g. no Performance where the game doesn't reach 60): the panel only lists the profiles a
+   block has. Values must be in the game's `options`:
 
    ```json
    "devices": {
@@ -117,6 +122,16 @@ game's install folder (Lies of P). If the prefix search finds nothing, search th
 find ~/.local/share/Steam/steamapps/common/"<Game folder>" -type f -mmin -5 2>/dev/null
 ```
 
+Native Linux games (no prefix: `bin/` has an ELF binary, no `.exe`) keep their settings in your
+home folder, usually under `~/.local/share/<Studio>/<Game>/` (Baldur's Gate 3:
+`~/.local/share/Larian Studios/Baldur's Gate 3/graphicSettings.lsx`). `capture.py` doesn't scan
+there yet: copy the file after each change and compare. Some games only save when you leave the
+options menu (Baldur's Gate 3), not when you change a setting.
+
+```bash
+find ~/.local/share -path ~/.local/share/Steam -prune -o -type f -mmin -5 -print 2>/dev/null
+```
+
 Supported formats:
 
 - **XML** with flat `<Key>value</Key>` elements (ELDEN RING's `GraphicsConfig.xml`). Keys are the
@@ -138,6 +153,12 @@ Supported formats:
   position in `values`) for fixed lists and reads `index`, so its entry sets both, e.g.
   `.../options[name=AmbientOcclusion]/index` = `"2"` with `value` = `"Medium"`. Changing only
   `value` looked right in the file but the game kept the old setting.
+- **LSX** (Larian's `graphicSettings.lsx`, Baldur's Gate 3): one `ConfigEntry` node per setting.
+  Keys are the `MapKey`, e.g. `ShadowQuality`. The game leaves a setting out while it's at its
+  default (the highest level, TAA, upscaler off, effects on, frame cap off), so `null` means
+  "the game's default": Loadout removes the entry. A missing key with a whole-number value is
+  added (int32, like the game writes it); Default removes it again. Values you've only seen as
+  absent stay `null`: never guess the number.
 
 Other formats (Wine registry, binary saves) aren't supported: you can still add an entry with
 launch env vars only, or open an issue with the file attached.
@@ -196,17 +217,24 @@ model):
 }
 ```
 
-- **Paths** start with `{prefix}/` (the game's Proton prefix) or `{install_dir}/` (the game's
-  install folder). Nothing else is allowed, and Loadout refuses paths that escape those folders.
-- **`format`** is `xml`, `ini` or `json`; see `1627720.json` (Lies of P) for an INI entry and
-  `1091500.json` (Cyberpunk 2077) for a JSON one.
+- **Paths** start with `{prefix}/` (the game's Proton prefix), `{install_dir}/` (the game's
+  install folder) or `{xdg_data}/` (`~/.local/share`, for native Linux games; Steam's own folder
+  there is refused). Nothing else is allowed, and Loadout refuses paths that escape those folders.
+- **`format`** is `xml`, `ini`, `json` or `lsx` (`.lsx` files only); see `1627720.json` (Lies of P)
+  for an INI entry, `1091500.json` (Cyberpunk 2077) for a JSON one and `1086940.json` (Baldur's
+  Gate 3) for an LSX one.
 - **No resolution keys**: the user picks the resolution in the game's menu
   (`test_bundled_games_leave_resolution_alone` enforces it). Leave out any key the game doesn't
   read from the file: Hogwarts Legacy rewrites its upscaler and resolution in
   `GameUserSettings.ini` from `SavedUserOptions.sav` on launch, so its entry sets only `sg.*`.
-- **Keys** must already exist in the file; copy them exactly (case matters).
-- **Profiles**: define only the ones you tested. The FPS cap comes from the device table, so a
-  profile's `files` are about graphics, not frame rate.
+- **Keys** must already exist in the file (except LSX, see above); copy them exactly (case matters).
+- **Profiles**: define only the ones you tested. The target FPS comes from the device table
+  (Loadout doesn't cap: the user sets Steam's frame limit), so a profile's `files` are about
+  graphics. Turn the game's own frame limit and VSync off where the file has them, so Steam's
+  limit is the only one.
+- **`resolution`** (optional, per profile): the resolution you played it at, e.g.
+  `"performance": { "resolution": "1280x720", "files": [...] }`. Loadout only shows it ("Recommended
+  resolution") and never writes it.
 - **Env vars** must match the allowlist (`DXVK_`, `VKD3D_`, `PROTON_`, `MANGOHUD`,
   `WINEDLLOVERRIDES`, `SDL_`, `MESA_`, `RADV_`).
 - **Game arguments** go in `"launch": { "args": ["--launcher-skip"] }` (Cyberpunk 2077 skips its
@@ -235,10 +263,10 @@ model):
 2. Create `py_modules/loadout/data/devices/<id>.json` (see `steam-deck-lcd.json`). In `match`, put
    a distinctive part of that string (matching is by substring, since some vendors add per-unit
    suffixes). Check it doesn't also match another device's string.
-3. `native` is the panel resolution. FPS caps should divide the refresh rate evenly (30/40/60 on
-   120 Hz, 36/48/72 on 144 Hz).
+3. `native` is the panel resolution. Each level's `fps_limit` is the profile's target FPS (shown,
+   not applied): it should divide the refresh rate evenly (30/40/60 on 120 Hz, 36/48/72 on 144 Hz).
 4. Add a case to `test_bundled_devices_load_and_detect` in `tests/test_core.py`, run the tests and
-   check that the Loadout setup screen detects the device.
+   check that the panel's **Device** row shows it.
 
 ## Pull request checklist
 

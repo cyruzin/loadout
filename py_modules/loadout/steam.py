@@ -74,8 +74,16 @@ def library_paths(steam_root: Path) -> list[Path]:
     return unique
 
 
+def _paths(lib: Path, appid: int, installdir: Any) -> Optional[dict[str, str]]:
+    if not isinstance(installdir, str) or not installdir or "/" in installdir or installdir in (".", ".."):
+        return None
+    return {"prefix": str(lib / "steamapps/compatdata" / str(appid) / "pfx"),
+            "install_dir": str(lib / "steamapps/common" / installdir),
+            "appid": str(appid)}
+
+
 def list_games(steam_root: Path) -> list[dict[str, Any]]:
-    games: dict[int, str] = {}
+    games: dict[int, dict[str, Any]] = {}
     for lib in library_paths(steam_root):
         for mf in sorted((lib / "steamapps").glob("appmanifest_*.acf")):
             try:
@@ -85,8 +93,8 @@ def list_games(steam_root: Path) -> list[dict[str, Any]]:
             except (OSError, ValueError, KeyError, TypeError):
                 continue  # malformed manifests are skipped, never fatal
             if isinstance(name, str) and name and not name.startswith(TOOL_PREFIXES):
-                games[appid] = name
-    return sorted(({"appid": a, "name": n} for a, n in games.items()), key=lambda g: g["name"].lower())
+                games[appid] = {"appid": appid, "name": name}
+    return sorted(games.values(), key=lambda g: g["name"].lower())
 
 
 def app_paths(steam_root: Path, appid: int) -> Optional[dict[str, str]]:
@@ -97,9 +105,5 @@ def app_paths(steam_root: Path, appid: int) -> Optional[dict[str, str]]:
             installdir = _root_block(mf)["installdir"]
         except (OSError, ValueError, KeyError):
             continue
-        if not isinstance(installdir, str) or not installdir or "/" in installdir or installdir in (".", ".."):
-            return None
-        return {"prefix": str(lib / "steamapps/compatdata" / str(appid) / "pfx"),
-                "install_dir": str(lib / "steamapps/common" / installdir),
-                "appid": str(appid)}
+        return _paths(lib, appid, installdir)
     return None

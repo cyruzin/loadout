@@ -7,7 +7,6 @@
   "levels": {
     "quality": { "any": { "fps_limit": 30 } },
     "balanced": { "any": { "fps_limit": 40 } },
-    "performance": { "any": { "fps_limit": 60 } },
-    "uncapped": { "any": {} }
+    "performance": { "any": { "fps_limit": 60 } }
   }
 }
