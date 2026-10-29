@@ -20,6 +20,7 @@ class Game(IntEnum):
     CRYSIS_3 = 2096610
     BALDURS_GATE_3 = 1086940
     WITCHER_3 = 292030
+    SKYRIM_SE = 489830
 
 # --- env -------------------------------------------------------------------
 
@@ -530,11 +531,12 @@ def test_bundled_games_load():
         settings = lambda d: {p: {**b, "resolution": None, "env": {k: v for k, v in b["env"].items() if k != "SteamDeck"}}
                               for p, b in devs[d]["profiles"].items()}
         assert all(settings(d) == settings(TESTED) for d in deck_class), game
-        # Recommended resolution: tested at 720p on the Ally (Lies of P Quality/Balanced at 1080p);
-        # the Decks' native 1280x800 (about 11% more pixels than 720p).
+        # Recommended resolution: tested at 720p on the Ally (Lies of P Quality/Balanced at 1080p,
+        # Skyrim SE Quality/Balanced at 900p); the Decks' native 1280x800.
+        higher = {(Game.LIES_OF_P, "quality"): "1920x1080", (Game.LIES_OF_P, "balanced"): "1920x1080",
+                  (Game.SKYRIM_SE, "quality"): "1600x900", (Game.SKYRIM_SE, "balanced"): "1600x900"}
         for name, body in devs[TESTED]["profiles"].items():
-            lies_1080p = game == Game.LIES_OF_P and name in ("quality", "balanced")
-            assert body["resolution"] == ("1920x1080" if lies_1080p else "1280x720"), (game, name)
+            assert body["resolution"] == higher.get((game, name), "1280x720"), (game, name)
         for d in ("steam-deck-lcd", "steam-deck-oled"):
             assert {b["resolution"] for b in devs[d]["profiles"].values()} == {"1280x800"}, (game, d)
 

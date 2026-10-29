@@ -1,0 +1,476 @@
+{
+  "schema_version": 2,
+  "appid": 489830,
+  "name": "The Elder Scrolls V: Skyrim Special Edition",
+  "options": {
+    "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini": {
+      "[Display]fShadowDistance": ["3000", "8000", "10000"],
+      "[Display]iNumFocusShadow": ["1", "2", "4"],
+      "[Display]iShadowMapResolution": ["1024", "2048", "4096"],
+      "[Display]bEnableProjecteUVDiffuseNormals": ["0", "1"],
+      "[Display]bUseTAA": ["0", "1"],
+      "[Display]bToggleSparkles": ["0", "1"],
+      "[Display]bScreenSpaceReflectionEnabled": ["0", "1"],
+      "[Display]bIBLFEnable": ["0", "1"],
+      "[Display]bUse64bitsHDRRenderTarget": ["0", "1"],
+      "[Display]bVolumetricLightingEnable": ["0", "1"],
+      "[Display]iVolumetricLightingQuality": ["0", "1", "2"],
+      "[Display]bEnableImprovedSnow": ["0", "1"],
+      "[Display]bFXAAEnabled": ["0", "1"],
+      "[Display]fMeshLODLevel2FadeDist": ["1600", "3000", "999999"],
+      "[Display]fMeshLODLevel1FadeDist": ["4000", "6000", "999999"],
+      "[Display]bUsePrecipitationOcclusion": ["0", "1"],
+      "[Imagespace]bLensFlare": ["0", "1"],
+      "[General]uLargeRefLODGridSize": ["5", "7", "9", "11"],
+      "[TerrainManager]fTreeLoadDistance": ["12500", "75000"],
+      "[TerrainManager]fBlockMaximumDistance": ["100000", "250000"],
+      "[TerrainManager]fBlockLevel1Distance": ["25000", "32000", "70000", "90000"],
+      "[TerrainManager]fBlockLevel0Distance": ["15000", "20000", "35000", "60000"],
+      "[TerrainManager]fSplitDistanceMult": ["0.5", "1.1", "1.5"],
+      "[Grass]fGrassStartFadeDistance": ["1000", "2300", "7000"],
+      "[Decals]bSkinnedDecals": ["0", "1"],
+      "[Decals]bDecals": ["0", "1"],
+      "[Decals]uMaxSkinDecals": ["0", "35", "100"],
+      "[Decals]uMaxDecals": ["0", "100", "1000"],
+      "[Decals]iMaxDecalsPerFrame": ["0", "10", "100"],
+      "[Decals]iMaxSkinDecalsPerFrame": ["0", "3", "25"],
+      "[LOD]fLODFadeOutMultObjects": ["5", "7", "9", "30"],
+      "[LOD]fLODFadeOutMultItems": ["1.5", "3", "6", "10"],
+      "[LOD]fLODFadeOutMultActors": ["5", "7", "9", "15"]
+    }
+  },
+  "devices": {
+    "steam-deck-lcd": {
+      "source": "https://www.reddit.com/r/SteamDeck/comments/186abe4/the_elder_scrolls_v_skyrim_special_edition_steam/",
+      "verified": { "proton": "default", "date": "2026-10-29" },
+      "profiles": {
+        "quality": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "10000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "1",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "2",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "90000",
+                "[TerrainManager]fBlockLevel0Distance": "60000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "30",
+                "[LOD]fLODFadeOutMultItems": "10",
+                "[LOD]fLODFadeOutMultActors": "15"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "8000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "70000",
+                "[TerrainManager]fBlockLevel0Distance": "35000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "9",
+                "[LOD]fLODFadeOutMultItems": "6",
+                "[LOD]fLODFadeOutMultActors": "9"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "3000",
+                "[Display]iNumFocusShadow": "2",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "0",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "3000",
+                "[Display]fMeshLODLevel1FadeDist": "6000",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "7",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "100000",
+                "[TerrainManager]fBlockLevel1Distance": "32000",
+                "[TerrainManager]fBlockLevel0Distance": "20000",
+                "[TerrainManager]fSplitDistanceMult": "1.1",
+                "[Grass]fGrassStartFadeDistance": "2300",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "35",
+                "[Decals]uMaxDecals": "100",
+                "[Decals]iMaxDecalsPerFrame": "10",
+                "[Decals]iMaxSkinDecalsPerFrame": "3",
+                "[LOD]fLODFadeOutMultObjects": "7",
+                "[LOD]fLODFadeOutMultItems": "3",
+                "[LOD]fLODFadeOutMultActors": "7"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "steam-deck-oled": {
+      "source": "https://www.reddit.com/r/SteamDeck/comments/186abe4/the_elder_scrolls_v_skyrim_special_edition_steam/",
+      "verified": { "proton": "default", "date": "2026-10-29" },
+      "profiles": {
+        "quality": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "10000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "1",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "2",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "90000",
+                "[TerrainManager]fBlockLevel0Distance": "60000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "30",
+                "[LOD]fLODFadeOutMultItems": "10",
+                "[LOD]fLODFadeOutMultActors": "15"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "8000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "70000",
+                "[TerrainManager]fBlockLevel0Distance": "35000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "9",
+                "[LOD]fLODFadeOutMultItems": "6",
+                "[LOD]fLODFadeOutMultActors": "9"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "resolution": "1280x800",
+          "launch": {
+            "env": { "SteamDeck": "0" }
+          },
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "3000",
+                "[Display]iNumFocusShadow": "2",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "0",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "3000",
+                "[Display]fMeshLODLevel1FadeDist": "6000",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "7",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "100000",
+                "[TerrainManager]fBlockLevel1Distance": "32000",
+                "[TerrainManager]fBlockLevel0Distance": "20000",
+                "[TerrainManager]fSplitDistanceMult": "1.1",
+                "[Grass]fGrassStartFadeDistance": "2300",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "35",
+                "[Decals]uMaxDecals": "100",
+                "[Decals]iMaxDecalsPerFrame": "10",
+                "[Decals]iMaxSkinDecalsPerFrame": "3",
+                "[LOD]fLODFadeOutMultObjects": "7",
+                "[LOD]fLODFadeOutMultItems": "3",
+                "[LOD]fLODFadeOutMultActors": "7"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "rog-xbox-ally": {
+      "source": "https://www.reddit.com/r/SteamDeck/comments/186abe4/the_elder_scrolls_v_skyrim_special_edition_steam/",
+      "verified": { "proton": "default", "date": "2026-10-29" },
+      "profiles": {
+        "quality": {
+          "resolution": "1600x900",
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "10000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "1",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "2",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "90000",
+                "[TerrainManager]fBlockLevel0Distance": "60000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "30",
+                "[LOD]fLODFadeOutMultItems": "10",
+                "[LOD]fLODFadeOutMultActors": "15"
+              }
+            }
+          ]
+        },
+        "balanced": {
+          "resolution": "1600x900",
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "8000",
+                "[Display]iNumFocusShadow": "4",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "1",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "999999",
+                "[Display]fMeshLODLevel1FadeDist": "999999",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "9",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "250000",
+                "[TerrainManager]fBlockLevel1Distance": "70000",
+                "[TerrainManager]fBlockLevel0Distance": "35000",
+                "[TerrainManager]fSplitDistanceMult": "1.5",
+                "[Grass]fGrassStartFadeDistance": "7000",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "100",
+                "[Decals]uMaxDecals": "1000",
+                "[Decals]iMaxDecalsPerFrame": "100",
+                "[Decals]iMaxSkinDecalsPerFrame": "25",
+                "[LOD]fLODFadeOutMultObjects": "9",
+                "[LOD]fLODFadeOutMultItems": "6",
+                "[LOD]fLODFadeOutMultActors": "9"
+              }
+            }
+          ]
+        },
+        "performance": {
+          "resolution": "1280x720",
+          "files": [
+            {
+              "path": "{prefix}/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini",
+              "format": "ini",
+              "set": {
+                "[Display]fShadowDistance": "3000",
+                "[Display]iNumFocusShadow": "2",
+                "[Display]iShadowMapResolution": "2048",
+                "[Display]bEnableProjecteUVDiffuseNormals": "1",
+                "[Display]bUseTAA": "1",
+                "[Display]bToggleSparkles": "1",
+                "[Display]bScreenSpaceReflectionEnabled": "1",
+                "[Display]bIBLFEnable": "1",
+                "[Display]bUse64bitsHDRRenderTarget": "0",
+                "[Display]bVolumetricLightingEnable": "0",
+                "[Display]iVolumetricLightingQuality": "0",
+                "[Display]bEnableImprovedSnow": "1",
+                "[Display]bFXAAEnabled": "0",
+                "[Display]fMeshLODLevel2FadeDist": "3000",
+                "[Display]fMeshLODLevel1FadeDist": "6000",
+                "[Display]bUsePrecipitationOcclusion": "1",
+                "[Imagespace]bLensFlare": "1",
+                "[General]uLargeRefLODGridSize": "7",
+                "[TerrainManager]fTreeLoadDistance": "75000",
+                "[TerrainManager]fBlockMaximumDistance": "100000",
+                "[TerrainManager]fBlockLevel1Distance": "32000",
+                "[TerrainManager]fBlockLevel0Distance": "20000",
+                "[TerrainManager]fSplitDistanceMult": "1.1",
+                "[Grass]fGrassStartFadeDistance": "2300",
+                "[Decals]bSkinnedDecals": "1",
+                "[Decals]bDecals": "1",
+                "[Decals]uMaxSkinDecals": "35",
+                "[Decals]uMaxDecals": "100",
+                "[Decals]iMaxDecalsPerFrame": "10",
+                "[Decals]iMaxSkinDecalsPerFrame": "3",
+                "[LOD]fLODFadeOutMultObjects": "7",
+                "[LOD]fLODFadeOutMultItems": "3",
+                "[LOD]fLODFadeOutMultActors": "7"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

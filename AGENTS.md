@@ -30,6 +30,8 @@ The plugin is an ENGINE; JSON files are DATA. Data can never contain code.
     wrote before that the new profile doesn't set go back to their originals (None: removed again).
     `allowed`: prefix, install dir, or `{xdg_data}` (`~/.local/share`, native games) minus its `Steam/`.
     `handler` picks lsxcfg by the `.lsx` extension (validation ties format and extension)
+    `same`: a number the game only rewrote (`3000` → `3000.0000`, Skyrim SE) is still Loadout's
+    value, not a change in game (string compare lost the original on profile switches)
   - `launch.py` marker-delimited launch-option block (build / strip / restore); game args go
     right after `%command%` and are recorded in the block (`LOADOUT_ARGS`) so strip needs no state
   - `planner.py` pure `build_plan` (dry-run, never writes)
@@ -161,6 +163,17 @@ RING (Proton) didn't start with it, and it overrides the QAM performance overlay
   `[Streaming/Textures]` with textures Ultra+), so the entry leaves those keys out (inicfg won't add
   a section). Ray tracing options are greyed out under Proton. Not confirmed: that every profile
   holds its target FPS.
+- Skyrim Special Edition: graphics only in its launcher, which writes `SkyrimPrefs.ini` (no BOM,
+  CRLF) when the Options window is closed with OK (Advanced's OK alone writes nothing). The four
+  presets were snapshotted on device (auto-detected Ultra = picked Ultra, byte for byte;
+  `Skyrim.ini` never changed); Godrays mapped one change at a time (Off 0/0, Low 1/0, Medium 1/1,
+  High 1/2 for `bVolumetricLightingEnable`/`iVolumetricLightingQuality`). Each launcher option
+  only touched its own keys, so the profiles combine preset snapshots with those values.
+  The game reads the file and rewrites it while running, keeping the profile's values (seen on
+  device with Quality) and adding its own keys (`iVSyncPresentInterval`, `[Bethesda.net]`, ...).
+  Anniversary Edition is DLC on the same app (489830); the original Skyrim (72850) is not covered.
+  With `SteamDeck=1` (Deck) the game skips the launcher and uses its own settings (GamingOnLinux,
+  Dec 2023); the Deck blocks set `SteamDeck=0`. Not tested on a Deck.
 
 ## Code style
 - Never use tool or plugin names (e.g. "ponytail") as comment prefixes. Write plain comments.

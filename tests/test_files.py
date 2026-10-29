@@ -933,3 +933,88 @@ def test_witcher3_profiles_are_kestononline_with_xess_and_no_performance():
             assert p["args"] == ["--launcher-skip"]
             # Steam sets SteamDeck=1 only on a Deck (not seen on a ROG Xbox Ally); 0 unlocks the menu there.
             assert p["env"] == ({"SteamDeck": "0"} if dev.startswith("steam-deck") else {}), (dev, name)
+
+
+# Skyrim SE's SkyrimPrefs.ini, copied from a device with the launcher's Ultra preset (no BOM, CRLF).
+SKYRIM_SE = (Path(__file__).parent / "data/skyrimse_skyrimprefs_ultra.ini").read_bytes()
+
+
+def test_skyrimse_profiles_switch_and_default_restores_the_file(tmp_path):
+    from loadout import games
+    assert SKYRIM_SE[:9] == b"[Display]" and SKYRIM_SE.count(b"\n") == SKYRIM_SE.count(b"\r\n")
+    profiles = games.load_games()[489830]["devices"]["rog-xbox-ally"]["profiles"]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(SKYRIM_SE)
+    state = {}
+    for name in ("quality", "performance", "balanced"):  # switching profiles, no Default in between
+        spec = profiles[name]["files"]
+        plan = apply(spec, ctx, state)
+        state = {str(cfg): plan.state[str(cfg)]}
+        assert inicfg.read_values(cfg.read_bytes(), list(spec[0]["set"])) == spec[0]["set"]
+        assert len(cfg.read_bytes().splitlines()) == len(SKYRIM_SE.splitlines())  # values only, no new lines
+    apply([], ctx, state)  # Default
+    assert cfg.read_bytes() == SKYRIM_SE
+
+
+def _skyrim_saves(cfg, keys):
+    """What the game does on save (seen on device): the launcher's `3000` becomes `3000.0000`."""
+    floats = {k: f"{float(v):.4f}" for k, v in inicfg.read_values(cfg.read_bytes(), keys).items()
+              if k.split("]")[1].startswith("f")}
+    cfg.write_bytes(inicfg.set_values(cfg.read_bytes(), floats))
+
+
+def test_skyrimse_game_rewriting_numbers_is_not_a_change_in_game(tmp_path):
+    from loadout import games
+    profiles = games.load_games()[489830]["devices"]["rog-xbox-ally"]["profiles"]
+    ctx = ctx_for(tmp_path)
+    cfg = tmp_path / "pfx/drive_c/users/steamuser/Documents/My Games/Skyrim Special Edition/SkyrimPrefs.ini"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_bytes(SKYRIM_SE)
+    keys = list(profiles["quality"]["files"][0]["set"])
+    original = inicfg.read_values(SKYRIM_SE, keys)
+    state = {}
+    for name in ("quality", "balanced", "performance"):  # playing with each one before switching
+        plan = apply(profiles[name]["files"], ctx, state)
+        assert not plan.warnings, plan.warnings
+        assert plan.state[str(cfg)]["[Display]fShadowDistance"]["old"] == "10000"  # the original, kept
+        state = {str(cfg): plan.state[str(cfg)]}
+        _skyrim_saves(cfg, keys)
+    assert not files.plan_files(profiles["performance"]["files"], ctx, state).changes  # nothing to redo
+    plan = apply([], ctx, state)  # Default
+    assert not plan.warnings, plan.warnings
+    assert all(files.same(v, original[k]) for k, v in inicfg.read_values(cfg.read_bytes(), keys).items())
+
+
+@pytest.mark.parametrize("a,b", [("3000", "3000.0000"), ("1.1", "1.1000"), ("-1", "-1.0"), ("0", "0.0000"),
+                                 ("x", "x"), (None, None)])
+def test_same_value(a, b):
+    assert files.same(a, b) and files.same(b, a)
+
+
+@pytest.mark.parametrize("a,b", [("1e3", "1000"), ("inf", "inf.0"), ("1_000", "1000"), ("0x10", "16"),
+                                 ("1", "2"), ("1", None), (None, "0"), ("True", "1"), (" 1", "1"),
+                                 ("1." , "1"), ("", "0")])
+def test_not_same_value(a, b):
+    assert not files.same(a, b)
+
+
+def test_skyrimse_profiles_follow_the_launcher_presets():
+    from loadout import games
+    for dev, block in games.load_games()[489830]["devices"].items():
+        assert set(block["profiles"]) == {"quality", "balanced", "performance"}, dev
+        for name, p in block["profiles"].items():
+            s = p["files"][0]["set"]
+            # Godrays (launcher values seen on device): Off 0/0, Low 1/0, Medium 1/1, High 1/2.
+            godrays = (s["[Display]bVolumetricLightingEnable"], s["[Display]iVolumetricLightingQuality"])
+            assert godrays == {"quality": ("1", "2"), "balanced": ("1", "0"), "performance": ("0", "0")}[name]
+            # Quality is Ultra with Shadow Quality High and Large Object Distance one notch down.
+            assert (s["[Display]iShadowMapResolution"], s["[General]uLargeRefLODGridSize"],
+                    s["[Display]bUse64bitsHDRRenderTarget"]) == {
+                "quality": ("2048", "9", "1"), "balanced": ("2048", "9", "0"), "performance": ("2048", "7", "0")}[name]
+            assert s["[Display]bUseTAA"] == "1" and s["[Display]bFXAAEnabled"] == "0"  # TAA, as the source says
+            assert s["[Decals]bDecals"] == "1"  # only the Low preset drops decals
+            assert p["args"] == []
+            # With Steam's SteamDeck=1 the game skips its launcher and its graphics settings; 0 brings them back.
+            assert p["env"] == ({"SteamDeck": "0"} if dev.startswith("steam-deck") else {}), (dev, name)

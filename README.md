@@ -36,7 +36,8 @@ should work too.
   change (a key some games leave out at its default, like The Witcher 3's, is added or removed as
   the game itself does), each original value is backed up, writes are atomic and all-or-nothing, and nothing is
   written while the game runs (the confirmation asks you to close it). Default puts every key back
-  unless the game changed it since.
+  unless the game changed it since (a number it only rewrites, like `3000` as `3000.0000`, isn't
+  a change).
 - Profiles are per device, so each device's graphics can be tuned on its own. When a game has no
   profiles for your device, **Use profiles from** lists the devices it has them for: pick one with a
   similar chip (a ROG Ally X can start from the ROG Xbox Ally's). Until you pick one, nothing is set.
@@ -103,7 +104,8 @@ Values live in `py_modules/loadout/data/devices/*.json` (`fps_limit` per profile
 ### Supported games
 
 ELDEN RING, Lies of P, Cyberpunk 2077, Hogwarts Legacy, Crysis 3 Remastered, Baldur's Gate 3
-(native Linux build) and The Witcher 3: Wild Hunt have game-specific entries. What each
+(native Linux build), The Witcher 3: Wild Hunt and The Elder Scrolls V: Skyrim Special Edition
+(Anniversary Edition included) have game-specific entries. What each
 profile sets per game, and which devices it has profiles for: [GAMES.md](GAMES.md).
 
 ### Not included

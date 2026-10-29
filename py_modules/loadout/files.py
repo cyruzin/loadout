@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
@@ -10,6 +11,14 @@ from .paths import safe_path
 from .store import atomic_write
 
 MAX_SIZE = 1024 * 1024
+_NUMBER = re.compile(r"^-?[0-9]{1,20}(\.[0-9]{1,20})?$")
+
+
+def same(a: Optional[str], b: Optional[str]) -> bool:
+    """Equal, or the same number written differently: Skyrim SE rewrites the launcher's
+    `fShadowDistance=3000` as `3000.0000` on save, which isn't a change in game."""
+    return a == b or (a is not None and b is not None and bool(_NUMBER.match(a)) and bool(_NUMBER.match(b))
+                      and float(a) == float(b))
 
 
 class FileChange(NamedTuple):
@@ -111,14 +120,14 @@ def plan_files(specs: list[dict[str, Any]], ctx: Optional[dict[str, str]],
                 continue
             base = current
             if key in prev:
-                if current == prev[key]["new"]:
+                if same(current, prev[key]["new"]):
                     base = prev[key]["old"]
                 elif key not in want:
                     warnings.append(f"{path.name}: {key} was changed in game since Loadout set it; keeping it.")
             value = want.get(key, base)
             if key in want:
                 new_state[key] = {"old": base, "new": value}
-            if value != current:
+            if not same(value, current):
                 target[key] = value
                 changes.append(FileChange(str(path), key, current, value))
         if target:

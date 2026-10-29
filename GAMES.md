@@ -23,6 +23,7 @@ its config file, the entry leaves it out and you set it in the menu (see Hogwart
 | Crysis 3 Remastered (2096610) | Steam Deck LCD/OLED, ROG Xbox Ally | High, textures High | Medium, textures High | Low, textures High |
 | Baldur's Gate 3 (1086940) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Low, textures Medium, FSR 2.2 Quality | — | — |
 | The Witcher 3: Wild Hunt (292030) | Steam Deck LCD/OLED, ROG Xbox Ally | mostly Medium, textures/detail High, water Low, XeSS Native AA, motion blur 2 | the same with XeSS Quality, detail Medium, motion blur and blur off | — |
+| The Elder Scrolls V: Skyrim Special Edition (489830) | Steam Deck LCD/OLED, ROG Xbox Ally | the launcher's Ultra with Shadow Quality High and Large Object Distance one notch down | High, Godrays Low | Medium, Godrays Off |
 
 ### Recommended resolution
 
@@ -39,6 +40,7 @@ than 720p, and Crysis 3's levels come from Deck reports at that resolution.
 | Crysis 3 Remastered | 1280×720 | 1280×800 |
 | Baldur's Gate 3 | 1280×720 | 1280×800 |
 | The Witcher 3 | 1280×720 | 1280×800 |
+| Skyrim Special Edition | 1600×900 (Quality, Balanced), 1280×720 (Performance) | 1280×800 |
 
 ## Notes per game
 
@@ -103,6 +105,23 @@ as you set them. All profiles launch with `--launcher-skip`. On the Steam Decks 
 also set `SteamDeck=0`, as ProtonDB reports do: with Steam's `SteamDeck=1` the game locks its
 graphics settings (not tested on a Deck). The ROG Xbox Ally doesn't need it: Steam doesn't set
 `SteamDeck` there. Not yet measured: whether each profile holds its target FPS.
+
+**The Elder Scrolls V: Skyrim Special Edition.** Covers the Anniversary Edition too (on Steam it's
+DLC on the same app, 489830). The original Skyrim (72850) and Skyrim VR are other apps, without an
+entry. Graphics are set only in the game's launcher, which writes `Documents/My Games/Skyrim Special
+Edition/SkyrimPrefs.ini` in the prefix; the game reads it on launch. Each profile sets the 33 keys
+the launcher's presets change, with values seen on device from the launcher. Balanced and
+Performance follow a Steam Deck guide from r/SteamDeck ("The Elder Scrolls V: Skyrim (Special
+Edition) Steam Deck Graphics Settings"): the High preset with Godrays Low for 40 FPS, the Medium
+preset with Godrays Off for 60, TAA, 64-bit render targets off. Quality (30 FPS) is the Ultra preset
+with Shadow Quality High (2048 shadow maps instead of 4096) and Large Object Distance one notch
+down (fewer cells of large objects loaded, less hitching when crossing cells); Godrays stay High.
+The game's own 60 FPS cap (its physics break above 60) is left alone. On the Steam Decks all
+profiles set `SteamDeck=0`: with Steam's `SteamDeck=1` the game skips its launcher and runs with
+its own Deck settings (not tested on a Deck). The ROG Xbox Ally doesn't need it.
+On a ROG Xbox Ally, Quality held 30 at 1080p (40+ outside Whiterun, low 30s in it; 45 to 50 at
+1600×900), so Quality and Balanced (lighter) are both recommended at 900p, for headroom.
+Not yet measured: Balanced at 40 and Performance at 60.
 
 ## Adding or verifying a game
 
