@@ -895,14 +895,12 @@ def test_witcher3_profiles_add_and_remove_keys_and_default_restores_them(tmp_pat
     cfg = tmp_path / "pfx/drive_c/users/steamuser/Documents/The Witcher 3/dx12user.settings"
     cfg.parent.mkdir(parents=True)
     cfg.write_bytes(WITCHER3)
-    keys = list(profiles["quality"]["files"][0]["set"])
-
     state = {}
     for name in ("quality", "balanced", "quality"):  # switching profiles, no Default in between
         spec = profiles[name]["files"]
         plan = apply(spec, ctx, state)
         state = {str(cfg): plan.state[str(cfg)]}
-        assert inicfg.read_values(cfg.read_bytes(), keys) == spec[0]["set"]
+        assert inicfg.read_values(cfg.read_bytes(), list(spec[0]["set"])) == spec[0]["set"]
         assert cfg.read_bytes().count(b"\n") == cfg.read_bytes().count(b"\r\n")  # still CRLF only
     # From the Medium file, textures High drops TextureDownscale and adds TextureMipBias (as the game does).
     from_original = {(k, v["old"], v["new"]) for k, v in state[str(cfg)].items()}
@@ -925,6 +923,10 @@ def test_witcher3_profiles_are_kestononline_with_xess_and_no_performance():
             # Detail Level: High for 30, Medium for 40 (less CPU).
             assert (s["[LevelOfDetail]DecalsHideDistance"], s["[Rendering]MeshLODDistanceScale"]) == {
                 "quality": ("40", "1.2"), "balanced": ("30", "1")}[name]
+            # Motion blur: On at 2 for 30 (absent = On), off for 40 along with blur (seen better on device).
+            blur = (s["[PostProcess]AllowMotionBlur"], s.get("[PostProcess]MotionBlurIntensity"),
+                    s.get("[PostProcess]AllowBlur", "unset"))
+            assert blur == {"quality": (None, "2", "unset"), "balanced": ("false", None, "false")}[name]
             assert s["[Viewport]VSync"] == "false" and s["[Engine]LimitFPS"] == "0"  # Steam's QAM limits
             # Keys whose section the game drops with them are left out: inicfg can't add a section.
             assert not any(k.startswith(("[Rendering/DRS]", "[Streaming/Textures]")) for k in s)
